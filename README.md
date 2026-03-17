@@ -33,3 +33,40 @@ services:
       - MAINTAINERR_URL=[http://192.168.1.100:6246](http://192.168.1.100:6246)
     volumes:
       - ./config.yml:/app/config.yml:ro
+```
+
+3. Create your `config.yml` in the same directory (see Configuration below).
+
+4. Run `docker compose up -d`.
+
+⚙️ Configuration (`config.yml`)
+Map this file into your container at /app/config.yml.
+
+```YAML
+# ==========================================
+# Maintainerr-to-Plex Sync Configuration
+# ==========================================
+
+settings:
+  # Modes: "run" (active), "dry_run" (testing), "undo" (revert Plex sorting)
+  run_mode: "run"
+  
+  # Log levels: DEBUG, INFO, WARNING, ERROR
+  log_level: "INFO"
+  
+  # "NOW" for a single immediate run (container exits afterwards)
+  # OR a list of times for standby mode
+  run_schedules:
+    - "04:30"
+    
+  # Exact names of the collections in Maintainerr to sync
+  collection_names:
+    - "Series unseen for 360 days"
+    - "Movies unseen for 1 year"
+```
+🛠️ How it works
+1. The script fetches the specified collections from your Maintainerr API.
+2. It calculates the days left before deletion for each item based on addDate and deleteAfterDays.
+3. It connects to Plex via the plexapi wrapper.
+4. It sets the Plex collection sort mode to custom.
+5. It iterates through the items and moves them into the correct order (items with the fewest days left go to position 1).
