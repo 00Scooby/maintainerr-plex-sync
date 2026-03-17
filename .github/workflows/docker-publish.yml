@@ -1,36 +1,39 @@
 name: Build and Publish Docker Image
 
-# Wann soll der Container gebaut werden?
 on:
   push:
-    branches: [ "main" ] # Bei jedem Push in den Main-Branch
-  workflow_dispatch: # Erlaubt dir auch, den Build manuell auf GitHub zu starten
+    branches: [ "main" ]
+  workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
   build-and-push-image:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write # WICHTIG: Erlaubt GitHub, das Image hochzuladen
+      packages: write
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      # HIER IST DEIN DYNAMISCHER TOLOWER-HACK! 😎
+      - name: Set Image Name to lowercase
+        run: echo "IMAGE_NAME=${GITHUB_REPOSITORY,,}" >> $GITHUB_ENV
 
       - name: Log in to the Container registry
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }} # Das Token generiert GitHub automatisch für dich!
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
           push: true
+          # Hier nutzt er jetzt die saubere, kleingeschriebene Variable
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
