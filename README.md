@@ -28,9 +28,9 @@ services:
     restart: unless-stopped
     environment:
       - TZ=Europe/Zurich # Change to your timezone
-      - PLEX_URL=[http://192.168.1.100:32400](http://192.168.1.100:32400)
+      - PLEX_URL=http://192.168.1.100:32400
       - PLEX_TOKEN=your_plex_token_here
-      - MAINTAINERR_URL=[http://192.168.1.100:6246](http://192.168.1.100:6246)
+      - MAINTAINERR_URL=http://192.168.1.100:6246
     volumes:
       - ./config.yml:/app/config.yml:ro
 ```
