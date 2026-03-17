@@ -1,0 +1,177 @@
+import os
+import sys
+import time
+import requests
+import yaml
+import logging
+import schedule
+from datetime import datetime, timezone
+from dotenv import load_dotenv
+from plexapi.server import PlexServer
+from plexapi.exceptions import NotFound
+
+load_dotenv()
+
+PLEX_URL = os.environ.get("PLEX_URL")
+PLEX_TOKEN = os.environ.get("PLEX_TOKEN")
+MAINTAINERR_URL = os.environ.get("MAINTAINERR_URL")
+
+def load_config():
+    try:
+        with open("config.yml", "r", encoding="utf-8") as file:
+            return yaml.safe_load(file)
+    except FileNotFoundError:
+        logging.error("❌ Fataler Fehler: config.yml nicht gefunden!")
+        return None
+
+def setup_logger(level_str):
+    levels = {"DEBUG": logging.DEBUG, "INFO": logging.INFO, "WARNING": logging.WARNING, "ERROR": logging.ERROR}
+    logging.basicConfig(level=levels.get(level_str.upper(), logging.INFO),
+                        format="%(asctime)s [%(levelname)s] %(message)s",
+                        datefmt="%Y-%m-%d %H:%M:%S",
+                        force=True) # force=True überschreibt alte Logger-Settings bei Reloads
+
+def calculate_days_left(add_date_str, delete_after_days):
+    add_date = datetime.strptime(add_date_str, "%Y-%m-%dT%H:%M:%S.%fZ").replace(tzinfo=timezone.utc)
+    now = datetime.now(timezone.utc)
+    days_in_list = (now - add_date).days
+    return max(0, delete_after_days - days_in_list)
+
+def sync_collections():
+    """Das ist unsere eigentliche Arbeitsmaschine."""
+    config = load_config()
+    if not config: return
+        
+    settings = config.get("settings", {})
+    is_dry_run = settings.get("run_mode", "dry_run") == "dry_run"
+    target_collections = settings.get("collection_names", [])
+    
+    if isinstance(target_collections, str):
+        target_collections = [target_collections]
+        
+    setup_logger(settings.get("log_level", "INFO"))
+    logging.info("🚀 Starte Maintainerr-to-Plex Sync (Custom Sort Edition)...")
+    if is_dry_run: logging.info("🛑 DRY RUN MODUS AKTIV: Plex wird nicht verändert.")
+
+    if not all([PLEX_URL, PLEX_TOKEN, MAINTAINERR_URL]):
+        logging.error("❌ Umgebungsvariablen fehlen.")
+        return
+
+    try:
+        logging.info("🔌 Verbinde mit Plex Server...")
+        plex = PlexServer(PLEX_URL, PLEX_TOKEN)
+    except Exception as e:
+        logging.error(f"❌ Fehler bei der Verbindung zu Plex: {e}")
+        return
+
+    maintainerr_api = f"{MAINTAINERR_URL}/api/collections"
+    logging.info(f"📡 Verbinde mit Maintainerr: {maintainerr_api}")
+    
+    try:
+        m_response = requests.get(maintainerr_api, headers={"Accept": "application/json"})
+        m_response.raise_for_status()
+        collections_data = m_response.json()
+        
+        found_any = False
+        
+        for coll in collections_data:
+            coll_title = coll.get("title")
+            
+            if coll_title in target_collections:
+                found_any = True
+                delete_days = coll.get("deleteAfterDays", 30)
+                media_list = coll.get("media", [])
+                
+                logging.info(f"✅ Kollektion '{coll_title}' in Maintainerr gefunden. Verarbeite {len(media_list)} Items...")
+                
+                sortable_items = []
+                for item in media_list:
+                    plex_id = item.get("mediaServerId")
+                    add_date = item.get("addDate")
+                    if not plex_id or not add_date: continue
+                    
+                    days_left = calculate_days_left(add_date, delete_days)
+                    sortable_items.append({"plex_id": int(plex_id), "days_left": days_left})
+                
+                sortable_items.sort(key=lambda x: x["days_left"])
+
+                try:
+                    plex_colls = plex.library.search(title=coll_title, libtype="collection")
+                    if not plex_colls:
+                        logging.warning(f"⚠️ Kollektion '{coll_title}' in Plex nicht gefunden!")
+                        continue
+                    
+                    plex_col = plex_colls[0]
+                    
+                    if not is_dry_run:
+                        plex_col.sortUpdate(sort="custom")
+                    
+                    prev_item = None
+                    position = 1
+                    
+                    for item_data in sortable_items:
+                        p_id = item_data["plex_id"]
+                        d_left = item_data["days_left"]
+                        
+                        try:
+                            plex_item = plex.fetchItem(p_id)
+                            if not is_dry_run:
+                                plex_col.moveItem(plex_item, after=prev_item)
+                                logging.info(f"✅ Platz {position:02d} | In {d_left} Tagen weg -> {plex_item.title}")
+                            else:
+                                logging.info(f"⏭️ DRY RUN: Würde '{plex_item.title}' auf Platz {position:02d} setzen (Noch {d_left} Tage).")
+                                
+                            prev_item = plex_item
+                            position += 1
+                            
+                        except NotFound:
+                            logging.warning(f"⚠️ Item mit ID {p_id} existiert in Plex nicht mehr. Übersprungen.")
+                            
+                except Exception as e:
+                    logging.error(f"❌ Fehler bei der Plex-Verarbeitung für '{coll_title}': {e}", exc_info=True)
+                        
+        if not found_any:
+            logging.warning("⚠️ Keine der angegebenen Kollektionen gefunden!")
+            
+    except Exception as e:
+        logging.error(f"Ein unerwarteter Fehler ist aufgetreten: {e}", exc_info=True)
+
+    logging.info("🏁 Sync-Durchlauf beendet.")
+
+def main():
+    # Initiales Laden der Config, nur um den Zeitplan zu checken
+    config = load_config()
+    if not config:
+        sys.exit(1)
+        
+    settings = config.get("settings", {})
+    # Holt die Zeiten, Standard ist Liste mit "NOW"
+    run_schedules = settings.get("run_schedules", ["NOW"])
+    
+    # Fallback: Falls jemand nur einen einzelnen Text statt einer Liste einträgt
+    if isinstance(run_schedules, str):
+        run_schedules = [run_schedules]
+        
+    setup_logger(settings.get("log_level", "INFO"))
+    
+    # Checken, ob irgendwo "NOW" drinsteht
+    if any(s.upper() == "NOW" for s in run_schedules):
+        logging.info("⚡ Modus 'NOW' erkannt: Führe Sync sofort aus und beende danach.")
+        sync_collections()
+        logging.info("👋 Container/Skript wird beendet. Ciao!")
+        sys.exit(0)
+    else:
+        # Standby-Modus für mehrere Zeiten
+        logging.info(f"🕒 Standby-Modus aktiviert. Geplante Syncs täglich um: {', '.join(run_schedules)} Uhr.")
+        
+        # Für jede Uhrzeit in der Liste einen Job anlegen
+        for time_str in run_schedules:
+            schedule.every().day.at(time_str).do(sync_collections)
+            
+        # Endlosschleife hält den Docker-Container am Leben
+        while True:
+            schedule.run_pending()
+            time.sleep(60) # Prüft jede Minute, ob ein Job ansteht
+
+if __name__ == "__main__":
+    main()

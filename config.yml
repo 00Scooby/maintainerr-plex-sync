@@ -1,0 +1,21 @@
+# ==========================================
+# Maintainerr-to-Plex Sync Konfiguration
+# ==========================================
+
+settings:
+  # "run" für scharfen Modus, "dry_run" zum Testen, "undo" zum Rückgängig machen der letzten Änderungen
+  run_mode: "run"
+  # Log-Level: DEBUG (alles), INFO (Standard), WARNING, ERROR
+  log_level: "INFO"
+  
+  # "NOW" für einen sofortigen, einmaligen Run (Container beendet sich danach)
+  # ODER eine Liste von Uhrzeiten für den Standby-Modus
+  run_schedules: 
+#    - "NOW"
+    - "04:30"
+#    - "23:00"
+  
+  # Liste aller Kollektionen, die synchronisiert werden sollen
+  collection_names:
+    - "Serien länger als 360 Tage nicht gesehen"
+    - "Nicht gesehen seit 1 Jahr"

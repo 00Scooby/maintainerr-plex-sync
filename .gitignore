@@ -1,0 +1,7 @@
+# Sicherheit
+.env
+
+# Python Cache-Müll
+__pycache__/
+*.pyc
+.DS_Store
