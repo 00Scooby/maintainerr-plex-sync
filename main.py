@@ -198,8 +198,9 @@ def sync_collections():
     if enable_kometa and kometa_overlays and kometa_overlays.get("overlays"):
         try:
             if is_dry_run:
-                export_path = "/app/dry_run_overlays.yml"
-                logging.info("🏜️ DRY RUN: Speichere Kometa-Datei lokal zum Testen...")
+                # NEU: Speichert die Datei jetzt im gemappten /dry_run Ordner!
+                export_path = "/dry_run/dry_run_overlays.yml"
+                logging.info("🏜️ DRY RUN: Speichere Kometa-Datei lokal neben der config.yml...")
             else:
                 export_path = "/app/kometa_export/maintainerr_overlays.yml"
                 
