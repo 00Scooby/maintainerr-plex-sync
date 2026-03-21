@@ -38,6 +38,7 @@ services:
       - MAINTAINERR_URL=http://192.168.1.100:6246
     volumes:
       - ./config.yml:/app/config.yml:ro
+      # OPTIONAL: Map this if you want to use the Kometa Overlay feature
       - ./kometa/config:/app/kometa_export
 ```
 
@@ -69,10 +70,25 @@ settings:
   collection_names:
     - "Series unseen for 360 days"
     - "Movies unseen for 1 year"
+
+  # ==========================================
+  # Kometa Overlay Integration (Optional)
+  # ==========================================
+  enable_kometa_overlays: true
+  
+  # Only generate overlays for these Plex libraries
+  kometa_allowed_libraries:
+    - "Filme"
+    
+  # Dynamic Color Thresholds
+  kometa_threshold_days: 10
+  kometa_color_urgent: "#E31E24"         # Background color for <= threshold (e.g., Red)
+  kometa_text_color_urgent: "#FFFFFF"    # Text color for <= threshold (e.g., White)
+  kometa_color_warning: "#F1C40F"        # Background color for > threshold (e.g., Yellow)
+  kometa_text_color_warning: "#FFFFFF"   # Text color for > threshold (e.g., White)
 ```
 🛠️ How it works
 1. The script fetches the specified collections from your Maintainerr API.
-2. It calculates the days left before deletion for each item based on addDate and deleteAfterDays.
-3. It connects to Plex via the plexapi wrapper.
-4. It sets the Plex collection sort mode to custom.
-5. It iterates through the items and moves them into the correct order (items with the fewest days left go to position 1).
+2. It calculates the days left before deletion for each item based on `addDate` and `deleteAfterDays`.
+3. It connects to Plex via the `plexapi` wrapper and updates the collection sorting.
+4. If enabled, it generates a `maintainerr_overlays.yml` file that Kometa can read to add visual expiration banners to your media.
