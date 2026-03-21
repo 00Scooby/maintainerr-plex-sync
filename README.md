@@ -2,9 +2,9 @@
 
 [![Docker Build](https://github.com/00Scooby/maintainerr-plex-sync/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/00Scooby/maintainerr-plex-sync/actions/workflows/docker-publish.yml)
 [![Docker Package](https://img.shields.io/badge/docker-ghcr.io-blue.svg)](https://github.com/00Scooby/maintainerr-plex-sync/pkgs/container/maintainerr-plex-sync)
+[![Version](https://img.shields.io/badge/version-1.1.1-brightgreen.svg)](https://github.com/00Scooby/maintainerr-plex-sync/releases/latest)
 [![Python 3.9](https://img.shields.io/badge/python-3.9-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/version-1.1.0-brightgreen.svg)](https://github.com/00Scooby/maintainerr-plex-sync/releases/latest)
 
 **Maintainerr-to-Plex Sync** is a fully automated Python microservice designed to bridge the gap between [Maintainerr](https://github.com/jorenn92/Maintainerr)'s deletion schedules and your Plex UI.
 
@@ -40,6 +40,8 @@ services:
       - MAINTAINERR_URL=http://192.168.1.100:6246
     volumes:
       - ./config.yml:/app/config.yml:ro
+      # OPTIONAL: Map this to access the exported YAML file during a 'dry_run'
+      - ./:/dry_run/
       # OPTIONAL: Map this if you want to use the Kometa Overlay feature
       - ./kometa/config:/app/kometa_export
 ```
