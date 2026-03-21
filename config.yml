@@ -7,6 +7,21 @@ settings:
   run_mode: "run"
   # Log-Level: DEBUG (alles), INFO (Standard), WARNING, ERROR
   log_level: "INFO"
+
+  # Kometa Overlay Einstellungen
+  enable_kometa_overlays: true
+  
+  # Nur Items aus diesen Plex-Libraries bekommen ein Overlay.
+  # Wenn die Liste leer ist, wird alles exportiert.
+  # Das Overlay funktioniert nur für Filme, nicht für Serien!
+  kometa_allowed_libraries:
+    - "Filme"
+  
+  kometa_threshold_days: 10              # Tage bis zum Farbwechsel
+  kometa_color_urgent: "#E31E24"         # Rot für <= 10 Tage
+  kometa_text_color_urgent: "#FFFFFF"    # Weisse Schrift für Rot
+  kometa_color_warning: "#F1C40F"        # Gelb für > 10 Tage
+  kometa_text_color_warning: "#FFFFFF"   # Weisse Schrift für Gelb
   
   # "NOW" für einen sofortigen, einmaligen Run (Container beendet sich danach)
   # ODER eine Liste von Uhrzeiten für den Standby-Modus
