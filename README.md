@@ -38,6 +38,7 @@ services:
       - MAINTAINERR_URL=http://192.168.1.100:6246
     volumes:
       - ./config.yml:/app/config.yml:ro
+      - ./kometa/config:/app/kometa_export
 ```
 
 3. Create your `config.yml` in the same directory (see Configuration below).
