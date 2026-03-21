@@ -26,10 +26,23 @@ def load_config():
 
 def setup_logger(level_str):
     levels = {"DEBUG": logging.DEBUG, "INFO": logging.INFO, "WARNING": logging.WARNING, "ERROR": logging.ERROR}
-    logging.basicConfig(level=levels.get(level_str.upper(), logging.INFO),
-                        format="%(asctime)s [%(levelname)s] %(message)s",
-                        datefmt="%Y-%m-%d %H:%M:%S",
-                        force=True)
+    
+    # NEU: Log-Ordner vorbereiten
+    log_dir = "/logs"
+    os.makedirs(log_dir, exist_ok=True)
+    log_file = os.path.join(log_dir, "maintainerr_sync.log")
+    
+    # NEU: Wir definieren zwei "Handler" (Konsole + Datei)
+    logging.basicConfig(
+        level=levels.get(level_str.upper(), logging.INFO),
+        format="%(asctime)s [%(levelname)s] %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+        force=True,
+        handlers=[
+            logging.FileHandler(log_file, encoding="utf-8"), # Speichert in die Datei
+            logging.StreamHandler(sys.stdout)                # Gibt es weiterhin in Dockge aus
+        ]
+    )
 
 def calculate_days_left(add_date_str, delete_after_days):
     add_date = datetime.strptime(add_date_str, "%Y-%m-%dT%H:%M:%S.%fZ").replace(tzinfo=timezone.utc)
