@@ -3,6 +3,8 @@ name: Build and Publish Docker Image
 on:
   push:
     branches: [ "main" ]
+    # DIESE ZEILE IST NEU: Hört jetzt auch auf Versions-Tags (z.B. v1.1.0)
+    tags: [ 'v*.*.*' ] 
   workflow_dispatch:
 
 env:
@@ -19,9 +21,21 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # HIER IST DEIN DYNAMISCHER TOLOWER-HACK! 😎
+      # Dein dynamischer ToLower-Hack 😎
       - name: Set Image Name to lowercase
         run: echo "IMAGE_NAME=${GITHUB_REPOSITORY,,}" >> $GITHUB_ENV
+
+      # DIESER BLOCK IST NEU: Der automatische Tag-Generator
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            # Setzt immer :latest, wenn du auf den main-Branch pushst
+            type=raw,value=latest,enable={{is_default_branch}}
+            # Extrahiert die Version aus deinem GitHub-Tag (z.B. aus v1.1.0 wird :1.1.0)
+            type=semver,pattern={{version}}
 
       - name: Log in to the Container registry
         uses: docker/login-action@v3
@@ -35,5 +49,6 @@ jobs:
         with:
           context: .
           push: true
-          # Hier nutzt er jetzt die saubere, kleingeschriebene Variable
-          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          # Hier nutzt er jetzt die magischen Tags aus dem Meta-Schritt
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
