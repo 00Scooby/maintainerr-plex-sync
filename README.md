@@ -4,6 +4,7 @@
 [![Docker Package](https://img.shields.io/badge/docker-ghcr.io-blue.svg)](https://github.com/00Scooby/maintainerr-plex-sync/pkgs/container/maintainerr-plex-sync)
 [![Python 3.9](https://img.shields.io/badge/python-3.9-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Version](https://img.shields.io/badge/version-1.1.0-brightgreen.svg)](https://github.com/00Scooby/maintainerr-plex-sync/releases/latest)
 
 **Maintainerr-to-Plex Sync** is a fully automated Python microservice designed to bridge the gap between [Maintainerr](https://github.com/jorenn92/Maintainerr)'s deletion schedules and your Plex UI.
 
@@ -28,6 +29,7 @@ version: "3.8"
 
 services:
   maintainerr-plex-sync:
+  # You can use :latest for automatic updates, or pin a specific version like :1.1.0
     image: ghcr.io/00scooby/maintainerr-plex-sync:latest
     container_name: maintainerr_sync
     restart: unless-stopped
