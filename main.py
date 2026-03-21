@@ -29,7 +29,7 @@ def setup_logger(level_str):
     logging.basicConfig(level=levels.get(level_str.upper(), logging.INFO),
                         format="%(asctime)s [%(levelname)s] %(message)s",
                         datefmt="%Y-%m-%d %H:%M:%S",
-                        force=True) # force=True überschreibt alte Logger-Settings bei Reloads
+                        force=True)
 
 def calculate_days_left(add_date_str, delete_after_days):
     add_date = datetime.strptime(add_date_str, "%Y-%m-%dT%H:%M:%S.%fZ").replace(tzinfo=timezone.utc)
@@ -46,6 +46,16 @@ def sync_collections():
     is_dry_run = settings.get("run_mode", "dry_run") == "dry_run"
     target_collections = settings.get("collection_names", [])
     
+    # Kometa Setup & Variablen laden
+    enable_kometa = settings.get("enable_kometa_overlays", False)
+    kometa_allowed_libs = settings.get("kometa_allowed_libraries", [])
+    threshold_days = settings.get("kometa_threshold_days", 10)
+    
+    color_urgent = settings.get("kometa_color_urgent", "#E31E24")
+    color_warning = settings.get("kometa_color_warning", "#F1C40F")
+    text_color_urgent = settings.get("kometa_text_color_urgent", "#FFFFFF")
+    text_color_warning = settings.get("kometa_text_color_warning", "#FFFFFF")
+
     if isinstance(target_collections, str):
         target_collections = [target_collections]
         
@@ -74,6 +84,32 @@ def sync_collections():
         
         found_any = False
         
+        # Dictionary mit eingebautem Kometa-Template anlegen
+        if enable_kometa:
+            kometa_overlays = {
+                "templates": {
+                    "days_left_banner": {
+                        "overlay": {
+                            "name": "text",
+                            "text": "<<days>>",
+                            "horizontal_align": "left",
+                            "vertical_align": "top",
+                            "horizontal_offset": 15,
+                            "vertical_offset": 15,
+                            "back_color": "<<color>>",             # Dynamischer Hintergrund
+                            "text_color": "<<text_color>>",        # Dynamische Schriftfarbe
+                            "back_radius": 15,
+                            "text_size": 40,
+                            "back_width": 300,
+                            "back_height": 65
+                        }
+                    }
+                },
+                "overlays": {}
+            }
+        else:
+            kometa_overlays = None
+
         for coll in collections_data:
             coll_title = coll.get("title")
             
@@ -115,12 +151,34 @@ def sync_collections():
                         
                         try:
                             plex_item = plex.fetchItem(p_id)
+                            
+                            # 1. Plex-Item verschieben (oder simulieren)
                             if not is_dry_run:
                                 plex_col.moveItem(plex_item, after=prev_item)
                                 logging.info(f"✅ Platz {position:02d} | In {d_left} Tagen weg -> {plex_item.title}")
                             else:
                                 logging.info(f"⏭️ DRY RUN: Würde '{plex_item.title}' auf Platz {position:02d} setzen (Noch {d_left} Tage).")
                                 
+                            # 2. Kometa-Daten dynamisch sammeln
+                            if enable_kometa:
+                                library_name = getattr(plex_item, "librarySectionTitle", "")
+                                
+                                if not kometa_allowed_libs or library_name in kometa_allowed_libs:
+                                    # Farblogik anwenden
+                                    current_color = color_urgent if d_left <= threshold_days else color_warning
+                                    current_text_color = text_color_urgent if d_left <= threshold_days else text_color_warning
+                                    
+                                    kometa_overlays["overlays"][plex_item.title] = {
+                                        "template": {
+                                            "name": "days_left_banner",
+                                            "days": f"Noch {d_left} Tage",
+                                            "color": current_color,
+                                            "text_color": current_text_color
+                                        }
+                                    }
+                                else:
+                                    logging.debug(f"Überspringe Kometa-Overlay für '{plex_item.title}' (Library '{library_name}' ist nicht freigegeben).")
+                                    
                             prev_item = plex_item
                             position += 1
                             
@@ -136,42 +194,52 @@ def sync_collections():
     except Exception as e:
         logging.error(f"Ein unerwarteter Fehler ist aufgetreten: {e}", exc_info=True)
 
+    # === KOMETA EXPORT ===
+    if enable_kometa and kometa_overlays and kometa_overlays.get("overlays"):
+        try:
+            if is_dry_run:
+                export_path = "/app/dry_run_overlays.yml"
+                logging.info("🏜️ DRY RUN: Speichere Kometa-Datei lokal zum Testen...")
+            else:
+                export_path = "/app/kometa_export/maintainerr_overlays.yml"
+                
+            os.makedirs(os.path.dirname(export_path), exist_ok=True)
+            
+            with open(export_path, "w", encoding="utf-8") as f:
+                yaml.dump(kometa_overlays, f, default_flow_style=False, allow_unicode=True)
+            logging.info(f"📝 Kometa Overlay-Datei erfolgreich generiert: {export_path}")
+        except Exception as e:
+            logging.error(f"❌ Fehler beim Schreiben der Kometa-Datei: {e}")
+
     logging.info("🏁 Sync-Durchlauf beendet.")
 
 def main():
-    # Initiales Laden der Config, nur um den Zeitplan zu checken
     config = load_config()
     if not config:
         sys.exit(1)
         
     settings = config.get("settings", {})
-    # Holt die Zeiten, Standard ist Liste mit "NOW"
     run_schedules = settings.get("run_schedules", ["NOW"])
     
-    # Fallback: Falls jemand nur einen einzelnen Text statt einer Liste einträgt
     if isinstance(run_schedules, str):
         run_schedules = [run_schedules]
         
     setup_logger(settings.get("log_level", "INFO"))
     
-    # Checken, ob irgendwo "NOW" drinsteht
     if any(s.upper() == "NOW" for s in run_schedules):
         logging.info("⚡ Modus 'NOW' erkannt: Führe Sync sofort aus und beende danach.")
         sync_collections()
         logging.info("👋 Container/Skript wird beendet. Ciao!")
         sys.exit(0)
     else:
-        # Standby-Modus für mehrere Zeiten
         logging.info(f"🕒 Standby-Modus aktiviert. Geplante Syncs täglich um: {', '.join(run_schedules)} Uhr.")
         
-        # Für jede Uhrzeit in der Liste einen Job anlegen
         for time_str in run_schedules:
             schedule.every().day.at(time_str).do(sync_collections)
             
-        # Endlosschleife hält den Docker-Container am Leben
         while True:
             schedule.run_pending()
-            time.sleep(60) # Prüft jede Minute, ob ein Job ansteht
+            time.sleep(60) 
 
 if __name__ == "__main__":
     main()
