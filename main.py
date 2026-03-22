@@ -4,6 +4,7 @@ import time
 import requests
 import yaml
 import logging
+from logging.handlers import RotatingFileHandler # <-- Diese Zeile ist neu
 import schedule
 from datetime import datetime, timezone
 from dotenv import load_dotenv
@@ -24,25 +25,32 @@ def load_config():
         logging.error("❌ Fataler Fehler: config.yml nicht gefunden!")
         return None
 
-def setup_logger(level_str):
+def setup_logger(level_str, rotate=False):
     levels = {"DEBUG": logging.DEBUG, "INFO": logging.INFO, "WARNING": logging.WARNING, "ERROR": logging.ERROR}
     
-    # NEU: Log-Ordner vorbereiten
     log_dir = "/logs"
     os.makedirs(log_dir, exist_ok=True)
     log_file = os.path.join(log_dir, "maintainerr_sync.log")
     
-    # NEU: Wir definieren zwei "Handler" (Konsole + Datei)
-    logging.basicConfig(
-        level=levels.get(level_str.upper(), logging.INFO),
-        format="%(asctime)s [%(levelname)s] %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-        force=True,
-        handlers=[
-            logging.FileHandler(log_file, encoding="utf-8"), # Speichert in die Datei
-            logging.StreamHandler(sys.stdout)                # Gibt es weiterhin in Dockge aus
-        ]
-    )
+    formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
+    
+    # NEU: RotatingFileHandler statt normalem FileHandler (behält maximal 10 Dateien)
+    file_handler = RotatingFileHandler(log_file, backupCount=10, encoding="utf-8")
+    
+    # Rotiert die Datei (verschiebt .1 zu .2 etc.), wenn ein neuer Durchlauf startet
+    if rotate and os.path.isfile(log_file) and os.path.getsize(log_file) > 0:
+        file_handler.doRollover()
+        
+    file_handler.setFormatter(formatter)
+    
+    stream_handler = logging.StreamHandler(sys.stdout)
+    stream_handler.setFormatter(formatter)
+    
+    root_logger = logging.getLogger()
+    root_logger.setLevel(levels.get(level_str.upper(), logging.INFO))
+    root_logger.handlers = []
+    root_logger.addHandler(file_handler)
+    root_logger.addHandler(stream_handler)
 
 def calculate_days_left(add_date_str, delete_after_days):
     add_date = datetime.strptime(add_date_str, "%Y-%m-%dT%H:%M:%S.%fZ").replace(tzinfo=timezone.utc)
@@ -72,13 +80,17 @@ def sync_collections():
     if isinstance(target_collections, str):
         target_collections = [target_collections]
         
-    setup_logger(settings.get("log_level", "INFO"))
+    # NEU: Wir befehlen ihm, für diesen Sync eine neue Datei zu beginnen
+    setup_logger(settings.get("log_level", "INFO"), rotate=True)
     logging.info("🚀 Starte Maintainerr-to-Plex Sync (Custom Sort Edition)...")
+        
     if is_dry_run: logging.info("🛑 DRY RUN MODUS AKTIV: Plex wird nicht verändert.")
 
     if not all([PLEX_URL, PLEX_TOKEN, MAINTAINERR_URL]):
         logging.error("❌ Umgebungsvariablen fehlen.")
         return
+
+    kometa_overlays = None
 
     try:
         logging.info("🔌 Verbinde mit Plex Server...")
@@ -103,16 +115,15 @@ def sync_collections():
                 "templates": {
                     "days_left_banner": {
                         "overlay": {
-                            "name": "text",
-                            "text": "<<days>>",
+                            "name": "text(<<days>>)",
                             "horizontal_align": "left",
                             "vertical_align": "top",
                             "horizontal_offset": 15,
                             "vertical_offset": 15,
                             "back_color": "<<color>>",             # Dynamischer Hintergrund
-                            "text_color": "<<text_color>>",        # Dynamische Schriftfarbe
+                            "font_color": "<<font_color>>",        # Dynamische Schriftfarbe
                             "back_radius": 15,
-                            "text_size": 40,
+                            "font_size": 40,
                             "back_width": 300,
                             "back_height": 65
                         }
@@ -184,9 +195,9 @@ def sync_collections():
                                     kometa_overlays["overlays"][plex_item.title] = {
                                         "template": {
                                             "name": "days_left_banner",
-                                            "days": f"Noch {d_left} Tage",
+                                            "days": f"Noch {days_left} Tage",
                                             "color": current_color,
-                                            "text_color": current_text_color
+                                            "font_color": current_text_color
                                         }
                                     }
                                 else:
@@ -238,7 +249,8 @@ def main():
     if isinstance(run_schedules, str):
         run_schedules = [run_schedules]
         
-    setup_logger(settings.get("log_level", "INFO"))
+    # NEU: Beim Start des Skripts (ausserhalb des Syncs) noch nicht rotieren
+    setup_logger(settings.get("log_level", "INFO"), rotate=False)
     
     if any(s.upper() == "NOW" for s in run_schedules):
         logging.info("⚡ Modus 'NOW' erkannt: Führe Sync sofort aus und beende danach.")
