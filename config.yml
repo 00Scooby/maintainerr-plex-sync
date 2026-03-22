@@ -21,7 +21,7 @@ settings:
   kometa_color_urgent: "#E31E24"         # Rot für <= 10 Tage
   kometa_text_color_urgent: "#FFFFFF"    # Weisse Schrift für Rot
   kometa_color_warning: "#F1C40F"        # Gelb für > 10 Tage
-  kometa_text_color_warning: "#FFFFFF"   # Weisse Schrift für Gelb
+  kometa_text_color_warning: "#141414"   # Sehr dunkles Grau (Plex-Hintergrund-Farbe)
   
   # "NOW" für einen sofortigen, einmaligen Run (Container beendet sich danach)
   # ODER eine Liste von Uhrzeiten für den Standby-Modus
