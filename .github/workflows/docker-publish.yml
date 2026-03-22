@@ -3,7 +3,6 @@ name: Build and Publish Docker Image
 on:
   push:
     branches: [ "main" ]
-    # DIESE ZEILE IST NEU: Hört jetzt auch auf Versions-Tags (z.B. v1.1.0)
     tags: [ 'v*.*.*' ] 
   workflow_dispatch:
 
@@ -21,11 +20,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Dein dynamischer ToLower-Hack 😎
       - name: Set Image Name to lowercase
         run: echo "IMAGE_NAME=${GITHUB_REPOSITORY,,}" >> $GITHUB_ENV
 
-      # DIESER BLOCK IST NEU: Der automatische Tag-Generator
       - name: Extract metadata (tags, labels) for Docker
         id: meta
         uses: docker/metadata-action@v5
