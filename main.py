@@ -34,10 +34,14 @@ def setup_logger(level_str, rotate=False):
     
     formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
     
-    # NEU: RotatingFileHandler statt normalem FileHandler (behält maximal 10 Dateien)
     file_handler = RotatingFileHandler(log_file, backupCount=10, encoding="utf-8")
     
-    # Rotiert die Datei (verschiebt .1 zu .2 etc.), wenn ein neuer Durchlauf startet
+    # NEU: Wir biegen den Standardnamen (.log.1) auf deinen Wunschnamen (-1.log) um
+    def custom_log_namer(default_name):
+        return default_name.replace(".log.", "-") + ".log"
+    
+    file_handler.namer = custom_log_namer
+    
     if rotate and os.path.isfile(log_file) and os.path.getsize(log_file) > 0:
         file_handler.doRollover()
         
