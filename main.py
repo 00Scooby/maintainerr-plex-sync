@@ -114,14 +114,17 @@ def sync_collections():
             kometa_overlays = {
                 "templates": {
                     "days_left_banner": {
+                        "plex_search": {
+                            "title": "<<item_title>>"
+                        },
                         "overlay": {
                             "name": "text(<<days>>)",
                             "horizontal_align": "left",
                             "vertical_align": "top",
                             "horizontal_offset": 15,
                             "vertical_offset": 15,
-                            "back_color": "<<color>>",             # Dynamischer Hintergrund
-                            "font_color": "<<font_color>>",        # Dynamische Schriftfarbe
+                            "back_color": "<<color>>",
+                            "font_color": "<<font_color>>",
                             "back_radius": 15,
                             "font_size": 40,
                             "back_width": 300,
@@ -195,6 +198,7 @@ def sync_collections():
                                     kometa_overlays["overlays"][plex_item.title] = {
                                         "template": {
                                             "name": "days_left_banner",
+                                            "item_title": plex_item.title,
                                             "days": f"Noch {days_left} Tage",
                                             "color": current_color,
                                             "font_color": current_text_color
