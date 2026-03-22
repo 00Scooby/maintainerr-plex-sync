@@ -118,17 +118,18 @@ def sync_collections():
                             "title": "<<item_title>>"
                         },
                         "overlay": {
-                            "name": "text(<<days>>)",
+                            # NEU: Variable umbenannt für bessere Kometa-Kompatibilität
+                            "name": "text(<<banner_text>>)", 
                             "horizontal_align": "left",
                             "vertical_align": "top",
-                            "horizontal_offset": 15,
-                            "vertical_offset": 15,
+                            "horizontal_offset": 20, # Etwas mehr Abstand zum Rand
+                            "vertical_offset": 20,   # Etwas mehr Abstand zum Rand
                             "back_color": "<<color>>",
                             "font_color": "<<font_color>>",
-                            "back_radius": 15,
-                            "font_size": 40,
-                            "back_width": 300,
-                            "back_height": 65
+                            "back_radius": 20,       # Etwas runder
+                            "font_size": 55,         # DEUTLICH größerer Text
+                            "back_width": 380,       # Breiteres Banner für den großen Text
+                            "back_height": 85        # Höheres Banner
                         }
                     }
                 },
@@ -199,7 +200,7 @@ def sync_collections():
                                         "template": {
                                             "name": "days_left_banner",
                                             "item_title": plex_item.title,
-                                            "days": f"Noch {days_left} Tage",
+                                            "banner_text": f"Noch {d_left} Tage", 
                                             "color": current_color,
                                             "font_color": current_text_color
                                         }
