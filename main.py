@@ -16,6 +16,7 @@ load_dotenv()
 PLEX_URL = os.environ.get("PLEX_URL")
 PLEX_TOKEN = os.environ.get("PLEX_TOKEN")
 MAINTAINERR_URL = os.environ.get("MAINTAINERR_URL")
+CURRENT_VERSION = "1.1.6"
 
 def load_config():
     try:
@@ -62,6 +63,21 @@ def calculate_days_left(add_date_str, delete_after_days):
     days_in_list = (now - add_date).days
     return max(0, delete_after_days - days_in_list)
 
+def check_for_updates():
+    try:
+        url = "https://api.github.com/repos/00Scooby/maintainerr-plex-sync/releases/latest"
+        response = requests.get(url, timeout=5)
+        if response.status_code == 200:
+            latest_version = response.json().get("tag_name", "").replace("v", "")
+            if latest_version and latest_version != CURRENT_VERSION:
+                logging.info(f"✨ Update verfügbar! Aktuell: v{CURRENT_VERSION} -> Neu: v{latest_version}")
+            else:
+                logging.info(f"✅ Skript ist auf dem neuesten Stand (v{CURRENT_VERSION}).")
+        else:
+            logging.debug(f"GitHub API antwortete mit Status Code: {response.status_code}")
+    except Exception as e:
+        logging.debug(f"Konnte GitHub nicht für Update-Check erreichen: {e}")
+
 def sync_collections():
     """Das ist unsere eigentliche Arbeitsmaschine."""
     config = load_config()
@@ -86,7 +102,8 @@ def sync_collections():
         
     # NEU: Wir befehlen ihm, für diesen Sync eine neue Datei zu beginnen
     setup_logger(settings.get("log_level", "INFO"), rotate=True)
-    logging.info("🚀 Starte Maintainerr-to-Plex Sync (Custom Sort Edition)...")
+    logging.info(f"🚀 Starte Maintainerr-to-Plex Sync (Version {CURRENT_VERSION})...")
+    check_for_updates()
         
     if is_dry_run: logging.info("🛑 DRY RUN MODUS AKTIV: Plex wird nicht verändert.")
 
