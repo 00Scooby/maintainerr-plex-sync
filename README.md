@@ -79,7 +79,7 @@ settings:
   # ==========================================
   # Kometa Overlay Integration (Optional)
   # ==========================================
-  enable_kometa_overlays: true
+  enable_kometa_overlays: false
   
   # Only generate overlays for these Plex libraries
   kometa_allowed_libraries:
