@@ -52,7 +52,7 @@ services:
 4. Run `docker compose up -d`.
 
 ## ⚙️ Configuration (`config.yml`)
-Map this file into your container at /app/config.yml.
+Map this file into your container at `/app/config.yml`.
 
 ```YAML
 # ==========================================
