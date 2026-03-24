@@ -130,28 +130,40 @@ def sync_collections():
         
         found_any = False
         
-        # Dictionary mit eingebautem Kometa-Template anlegen
+# Dictionary mit eingebauten Kometa-Templates anlegen
         if enable_kometa:
+            # Das Basis-Design (damit wir es nicht doppelt schreiben müssen)
+            overlay_design = {
+                "name": "text(<<banner_text>>)",
+                "horizontal_align": "left",
+                "vertical_align": "top",
+                "horizontal_offset": 20,
+                "vertical_offset": 20,
+                "back_color": "<<color>>",
+                "font_color": "<<font_color>>",
+                "back_radius": 20,
+                "font_size": 55,
+                "back_width": 380,
+                "back_height": 85
+            }
+            
             kometa_overlays = {
                 "templates": {
+                    # Template 1: Für Filme
                     "days_left_banner": {
                         "plex_search": {
                             "title": "<<item_title>>"
                         },
-                        "overlay": {
-                            # NEU: Variable umbenannt für bessere Kometa-Kompatibilität
-                            "name": "text(<<banner_text>>)", 
-                            "horizontal_align": "left",
-                            "vertical_align": "top",
-                            "horizontal_offset": 20, # Etwas mehr Abstand zum Rand
-                            "vertical_offset": 20,   # Etwas mehr Abstand zum Rand
-                            "back_color": "<<color>>",
-                            "font_color": "<<font_color>>",
-                            "back_radius": 20,       # Etwas runder
-                            "font_size": 55,         # DEUTLICH größerer Text
-                            "back_width": 380,       # Breiteres Banner für den großen Text
-                            "back_height": 85        # Höheres Banner
-                        }
+                        "overlay": overlay_design.copy()
+                    },
+                    # Template 2: Speziell für Staffeln
+                    "days_left_banner_season": {
+                        "plex_search": {
+                            "type": "season",
+                            "show.title": "<<show_title>>",
+                            "title": "<<season_title>>"
+                        },
+                        "overlay": overlay_design.copy()
                     }
                 },
                 "overlays": {}
@@ -216,16 +228,38 @@ def sync_collections():
                                     # Farblogik anwenden
                                     current_color = color_urgent if d_left <= threshold_days else color_warning
                                     current_text_color = text_color_urgent if d_left <= threshold_days else text_color_warning
+                                
+                                    # NEU: Dynamische Grammatik für Singular/Plural
+                                    tag_wort = "Tag" if d_left == 1 else "Tage"
+                                    final_banner_text = f"Noch {d_left} {tag_wort}"
+                                
+                                    # Weiche für Filme vs. Staffeln
+                                    if plex_item.type == "season":
+                                        show_title = getattr(plex_item, "parentTitle", "Unbekannte Serie")
+                                        season_title = plex_item.title # z. B. "Staffel 1"
+                                        dict_key = f"{show_title} - {season_title}" # Eindeutiger Name für die Liste
                                     
-                                    kometa_overlays["overlays"][plex_item.title] = {
-                                        "template": {
-                                            "name": "days_left_banner",
-                                            "item_title": plex_item.title,
-                                            "banner_text": f"Noch {d_left} Tage", 
-                                            "color": current_color,
-                                            "font_color": current_text_color
+                                        kometa_overlays["overlays"][dict_key] = {
+                                            "template": {
+                                                "name": "days_left_banner_season",
+                                                "show_title": show_title,
+                                                "season_title": season_title,
+                                                "banner_text": final_banner_text, # <-- Hier übergeben wir den smarten Text
+                                                "color": current_color,
+                                                "font_color": current_text_color
+                                            }
                                         }
-                                    }
+                                    else:
+                                        dict_key = plex_item.title
+                                        kometa_overlays["overlays"][dict_key] = {
+                                            "template": {
+                                                "name": "days_left_banner",
+                                                "item_title": plex_item.title,
+                                                "banner_text": final_banner_text, # <-- Hier übergeben wir den smarten Text
+                                                "color": current_color,
+                                                "font_color": current_text_color
+                                            }
+                                        }
                                 else:
                                     logging.debug(f"Überspringe Kometa-Overlay für '{plex_item.title}' (Library '{library_name}' ist nicht freigegeben).")
                                     
