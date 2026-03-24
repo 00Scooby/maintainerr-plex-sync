@@ -16,7 +16,7 @@ load_dotenv()
 PLEX_URL = os.environ.get("PLEX_URL")
 PLEX_TOKEN = os.environ.get("PLEX_TOKEN")
 MAINTAINERR_URL = os.environ.get("MAINTAINERR_URL")
-CURRENT_VERSION = "1.1.8"
+CURRENT_VERSION = "1.1.9"
 
 def load_config():
     try:
@@ -203,23 +203,10 @@ def sync_collections():
                                 library_name = getattr(plex_item, "librarySectionTitle", "Unbekannt")
                                 
                                 if not kometa_allowed_libs or library_name in kometa_allowed_libs:
-                                    # Falls die Mediathek noch nicht im Export-Dictionary ist, legen wir sie an
+                                    # Falls die Mediathek noch nicht existiert, legen wir sie komplett leer an
                                     if library_name not in kometa_exports:
                                         kometa_exports[library_name] = {
-                                            "templates": {
-                                                "days_left_banner": {
-                                                    "plex_search": {"title": "<<item_title>>"},
-                                                    "overlay": overlay_design.copy()
-                                                },
-                                                "days_left_banner_season": {
-                                                    "plex_search": {
-                                                        "type": "season",
-                                                        "show.title": "<<show_title>>",
-                                                        "title": "<<season_title>>"
-                                                    },
-                                                    "overlay": overlay_design.copy()
-                                                }
-                                            },
+                                            "templates": {},
                                             "overlays": {}
                                         }
 
@@ -233,8 +220,19 @@ def sync_collections():
                                     
                                     # Weiche für Filme vs. Staffeln
                                     if plex_item.type == "season":
+                                        # Füge das Staffel-Template nur hinzu, wenn es in dieser Mediathek gebraucht wird
+                                        if "days_left_banner_season" not in kometa_exports[library_name]["templates"]:
+                                            kometa_exports[library_name]["templates"]["days_left_banner_season"] = {
+                                                "plex_search": {
+                                                    "type": "season",
+                                                    "show.title": "<<show_title>>",
+                                                    "title": "<<season_title>>"
+                                                },
+                                                "overlay": overlay_design.copy()
+                                            }
+                                            
                                         show_title = getattr(plex_item, "parentTitle", "Unbekannte Serie")
-                                        season_title = plex_item.title # z. B. "Staffel 1"
+                                        season_title = plex_item.title
                                         dict_key = f"{show_title} - {season_title}"
                                         
                                         kometa_exports[library_name]["overlays"][dict_key] = {
@@ -248,6 +246,13 @@ def sync_collections():
                                             }
                                         }
                                     else:
+                                        # Füge das Film-Template nur hinzu, wenn es in dieser Mediathek gebraucht wird
+                                        if "days_left_banner" not in kometa_exports[library_name]["templates"]:
+                                            kometa_exports[library_name]["templates"]["days_left_banner"] = {
+                                                "plex_search": {"title": "<<item_title>>"},
+                                                "overlay": overlay_design.copy()
+                                            }
+                                            
                                         dict_key = plex_item.title
                                         kometa_exports[library_name]["overlays"][dict_key] = {
                                             "template": {
