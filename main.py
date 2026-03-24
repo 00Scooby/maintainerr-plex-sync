@@ -223,23 +223,24 @@ def sync_collections():
                                         # Füge das Staffel-Template nur hinzu, wenn es in dieser Mediathek gebraucht wird
                                         if "days_left_banner_season" not in kometa_exports[library_name]["templates"]:
                                             kometa_exports[library_name]["templates"]["days_left_banner_season"] = {
-                                                "builder_level": "season", # <-- DAS IST DER LEBENSRETTER!
+                                                "builder_level": "season",
                                                 "plex_search": {
                                                     "show.title": "<<show_title>>",
-                                                    "title": "<<season_title>>"
+                                                    "season.index": "<<season_number>>" # <-- Hier fragen wir jetzt die harte Zahl ab
                                                 },
                                                 "overlay": overlay_design.copy()
                                             }
                                             
                                         show_title = getattr(plex_item, "parentTitle", "Unbekannte Serie")
                                         season_title = plex_item.title
+                                        season_num = plex_item.index # Holt sich die reine Zahl (z. B. 2) aus Plex
                                         dict_key = f"{show_title} - {season_title}"
                                         
                                         kometa_exports[library_name]["overlays"][dict_key] = {
                                             "template": {
                                                 "name": "days_left_banner_season",
                                                 "show_title": show_title,
-                                                "season_title": season_title,
+                                                "season_number": season_num, # Übergeben die Zahl ans Template
                                                 "banner_text": final_banner_text,
                                                 "color": current_color,
                                                 "font_color": current_text_color
