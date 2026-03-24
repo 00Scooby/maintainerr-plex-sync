@@ -1,4 +1,5 @@
 # Maintainerr-to-Plex Sync 🚀
+[🇩🇪 Deutsch](README_DE.md) | [🇬🇧 English](README.md)
 
 [![Docker Build](https://github.com/00Scooby/maintainerr-plex-sync/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/00Scooby/maintainerr-plex-sync/actions/workflows/docker-publish.yml)
 [![Docker Package](https://img.shields.io/badge/docker-ghcr.io-blue.svg)](https://github.com/00Scooby/maintainerr-plex-sync/pkgs/container/maintainerr-plex-sync)
@@ -112,3 +113,22 @@ libraries:
     overlay_path:
       - file: config/maintainerr_Serien.yml
 ```
+## 🚑 Troubleshooting
+
+### ⚠️ Log: "Kollektion '[Name]' in Plex nicht gefunden!"
+**Cause:** The script found the collection in Maintainerr, but it doesn't exist in Plex under that exact name.
+**Solution:** Check the exact spelling in both Plex and Maintainerr. It must be a 100% match (including spaces and case sensitivity).
+
+### ⚠️ Log: "DRY RUN MODUS AKTIV: Plex wird nicht verändert."
+**Cause:** The script is only reading data. It won't reorder anything in Plex and saves the generated Kometa files to a test folder.
+**Solution:** Change `run_mode: "dry_run"` to `run_mode: "run"` in your `config.yml` and restart the container to apply changes to Plex.
+
+### ⚠️ No Kometa YAML files are being exported
+**Cause 1:** The Kometa feature is disabled in your configuration.
+**Solution 1:** Ensure `enable_kometa_overlays: true` is set in your `config.yml`.
+**Cause 2:** The library names don't match.
+**Solution 2:** Check the `kometa_allowed_libraries` block. The names (e.g., "Movies", "TV Shows") must exactly match the library names on your Plex server.
+
+### ⚠️ Log: "Fehler bei der Verbindung zu Plex / Maintainerr"
+**Cause:** The script cannot reach the respective APIs, or authentication failed.
+**Solution:** Double-check your `docker-compose.yml` (or `.env` file) to ensure the `PLEX_URL`, `PLEX_TOKEN`, and `MAINTAINERR_URL` are correct and accessible from within the Docker container.
