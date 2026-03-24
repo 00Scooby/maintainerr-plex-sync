@@ -16,7 +16,7 @@ load_dotenv()
 PLEX_URL = os.environ.get("PLEX_URL")
 PLEX_TOKEN = os.environ.get("PLEX_TOKEN")
 MAINTAINERR_URL = os.environ.get("MAINTAINERR_URL")
-CURRENT_VERSION = "1.1.13"
+CURRENT_VERSION = "1.1.14"
 
 def load_config():
     try:
@@ -225,10 +225,10 @@ def sync_collections():
                                             kometa_exports[library_name]["templates"]["days_left_banner_season"] = {
                                                 "builder_level": "season",
                                                 "plex_search": {
-                                                    "title": "<<show_title>>" # Step 1: Holt alle Staffeln der Serie von Plex
+                                                    "show.title": "<<show_title>>" # Holt blitzschnell alle Staffeln dieser spezifischen Serie
                                                 },
                                                 "filters": {
-                                                    "title": "<<season_title>>" # Step 2: Kometa filtert lokal auf die korrekte Staffel
+                                                    "title.is": "<<season_title>>" # .is Modifier für exakten Match (kein Verwechseln von Staffel 2 mit 20)
                                                 },
                                                 "overlay": overlay_design.copy()
                                             }
