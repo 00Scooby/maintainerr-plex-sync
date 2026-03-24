@@ -16,7 +16,7 @@ load_dotenv()
 PLEX_URL = os.environ.get("PLEX_URL")
 PLEX_TOKEN = os.environ.get("PLEX_TOKEN")
 MAINTAINERR_URL = os.environ.get("MAINTAINERR_URL")
-CURRENT_VERSION = "1.1.6"
+CURRENT_VERSION = "1.1.8"
 
 def load_config():
     try:
@@ -130,9 +130,11 @@ def sync_collections():
         
         found_any = False
         
-# Dictionary mit eingebauten Kometa-Templates anlegen
+        # Dictionary für die aufgeteilten Bibliotheken
+        kometa_exports = {}
+        
+        # Das Basis-Design (damit wir es nicht doppelt schreiben müssen)
         if enable_kometa:
-            # Das Basis-Design (damit wir es nicht doppelt schreiben müssen)
             overlay_design = {
                 "name": "text(<<banner_text>>)",
                 "horizontal_align": "left",
@@ -146,30 +148,6 @@ def sync_collections():
                 "back_width": 380,
                 "back_height": 85
             }
-            
-            kometa_overlays = {
-                "templates": {
-                    # Template 1: Für Filme
-                    "days_left_banner": {
-                        "plex_search": {
-                            "title": "<<item_title>>"
-                        },
-                        "overlay": overlay_design.copy()
-                    },
-                    # Template 2: Speziell für Staffeln
-                    "days_left_banner_season": {
-                        "plex_search": {
-                            "type": "season",
-                            "show.title": "<<show_title>>",
-                            "title": "<<season_title>>"
-                        },
-                        "overlay": overlay_design.copy()
-                    }
-                },
-                "overlays": {}
-            }
-        else:
-            kometa_overlays = None
 
         for coll in collections_data:
             coll_title = coll.get("title")
@@ -222,40 +200,60 @@ def sync_collections():
                                 
                             # 2. Kometa-Daten dynamisch sammeln
                             if enable_kometa:
-                                library_name = getattr(plex_item, "librarySectionTitle", "")
+                                library_name = getattr(plex_item, "librarySectionTitle", "Unbekannt")
                                 
                                 if not kometa_allowed_libs or library_name in kometa_allowed_libs:
+                                    # Falls die Mediathek noch nicht im Export-Dictionary ist, legen wir sie an
+                                    if library_name not in kometa_exports:
+                                        kometa_exports[library_name] = {
+                                            "templates": {
+                                                "days_left_banner": {
+                                                    "plex_search": {"title": "<<item_title>>"},
+                                                    "overlay": overlay_design.copy()
+                                                },
+                                                "days_left_banner_season": {
+                                                    "plex_search": {
+                                                        "type": "season",
+                                                        "show.title": "<<show_title>>",
+                                                        "title": "<<season_title>>"
+                                                    },
+                                                    "overlay": overlay_design.copy()
+                                                }
+                                            },
+                                            "overlays": {}
+                                        }
+
                                     # Farblogik anwenden
                                     current_color = color_urgent if d_left <= threshold_days else color_warning
                                     current_text_color = text_color_urgent if d_left <= threshold_days else text_color_warning
-                                
-                                    # NEU: Dynamische Grammatik für Singular/Plural
+                                    
+                                    # Dynamische Grammatik für Singular/Plural
                                     tag_wort = "Tag" if d_left == 1 else "Tage"
                                     final_banner_text = f"Noch {d_left} {tag_wort}"
-                                
+                                    
                                     # Weiche für Filme vs. Staffeln
                                     if plex_item.type == "season":
                                         show_title = getattr(plex_item, "parentTitle", "Unbekannte Serie")
                                         season_title = plex_item.title # z. B. "Staffel 1"
-                                        dict_key = f"{show_title} - {season_title}" # Eindeutiger Name für die Liste
-                                    
-                                        kometa_overlays["overlays"][dict_key] = {
+                                        dict_key = f"{show_title} - {season_title}"
+                                        
+                                        kometa_exports[library_name]["overlays"][dict_key] = {
                                             "template": {
                                                 "name": "days_left_banner_season",
                                                 "show_title": show_title,
                                                 "season_title": season_title,
-                                                "banner_text": final_banner_text, # <-- Hier übergeben wir den smarten Text
+                                                "banner_text": final_banner_text,
                                                 "color": current_color,
                                                 "font_color": current_text_color
                                             }
                                         }
                                     else:
                                         dict_key = plex_item.title
-                                        kometa_overlays["overlays"][dict_key] = {
+                                        kometa_exports[library_name]["overlays"][dict_key] = {
                                             "template": {
                                                 "name": "days_left_banner",
                                                 "item_title": plex_item.title,
-                                                "banner_text": final_banner_text, # <-- Hier übergeben wir den smarten Text
+                                                "banner_text": final_banner_text,
                                                 "color": current_color,
                                                 "font_color": current_text_color
                                             }
@@ -279,22 +277,28 @@ def sync_collections():
         logging.error(f"Ein unerwarteter Fehler ist aufgetreten: {e}", exc_info=True)
 
     # === KOMETA EXPORT ===
-    if enable_kometa and kometa_overlays and kometa_overlays.get("overlays"):
-        try:
-            if is_dry_run:
-                # NEU: Speichert die Datei jetzt im gemappten /dry_run Ordner!
-                export_path = "/dry_run/dry_run_overlays.yml"
-                logging.info("🏜️ DRY RUN: Speichere Kometa-Datei lokal neben der config.yml...")
-            else:
-                export_path = "/app/kometa_export/maintainerr_overlays.yml"
+    if enable_kometa and kometa_exports:
+        for lib_name, lib_data in kometa_exports.items():
+            if not lib_data.get("overlays"):
+                continue
                 
-            os.makedirs(os.path.dirname(export_path), exist_ok=True)
+            # Dateinamen sicher machen (Leerzeichen zu Unterstrichen)
+            safe_lib_name = "".join(c for c in lib_name if c.isalnum() or c in (' ', '_')).replace(' ', '_')
             
-            with open(export_path, "w", encoding="utf-8") as f:
-                yaml.dump(kometa_overlays, f, default_flow_style=False, allow_unicode=True)
-            logging.info(f"📝 Kometa Overlay-Datei erfolgreich generiert: {export_path}")
-        except Exception as e:
-            logging.error(f"❌ Fehler beim Schreiben der Kometa-Datei: {e}")
+            try:
+                if is_dry_run:
+                    export_path = f"/dry_run/dry_run_{safe_lib_name}.yml"
+                    logging.info(f"🏜️ DRY RUN: Speichere Kometa-Datei lokal: {export_path}")
+                else:
+                    export_path = f"/app/kometa_export/maintainerr_{safe_lib_name}.yml"
+                
+                os.makedirs(os.path.dirname(export_path), exist_ok=True)
+                
+                with open(export_path, "w", encoding="utf-8") as f:
+                    yaml.dump(lib_data, f, default_flow_style=False, allow_unicode=True)
+                logging.info(f"📝 Kometa Overlay-Datei für '{lib_name}' generiert: {export_path}")
+            except Exception as e:
+                logging.error(f"❌ Fehler beim Schreiben der Kometa-Datei für '{lib_name}': {e}")
 
     logging.info("🏁 Sync-Durchlauf beendet.")
 
