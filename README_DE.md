@@ -4,7 +4,7 @@
 
 [![Docker Build](https://github.com/00Scooby/maintainerr-plex-sync/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/00Scooby/maintainerr-plex-sync/actions/workflows/docker-publish.yml)
 [![Docker Package](https://img.shields.io/badge/docker-ghcr.io-blue.svg)](https://github.com/00Scooby/maintainerr-plex-sync/pkgs/container/maintainerr-plex-sync)
-[![Version](https://img.shields.io/badge/version-1.1.12-brightgreen.svg)](https://github.com/00Scooby/maintainerr-plex-sync/releases/latest)
+[![Version](https://img.shields.io/badge/version-1.1.13-brightgreen.svg)](https://github.com/00Scooby/maintainerr-plex-sync/releases/latest)
 [![Python 3.9](https://img.shields.io/badge/python-3.9-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 

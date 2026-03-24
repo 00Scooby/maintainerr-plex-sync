@@ -16,7 +16,7 @@ load_dotenv()
 PLEX_URL = os.environ.get("PLEX_URL")
 PLEX_TOKEN = os.environ.get("PLEX_TOKEN")
 MAINTAINERR_URL = os.environ.get("MAINTAINERR_URL")
-CURRENT_VERSION = "1.1.12"
+CURRENT_VERSION = "1.1.13"
 
 def load_config():
     try:
@@ -225,24 +225,23 @@ def sync_collections():
                                             kometa_exports[library_name]["templates"]["days_left_banner_season"] = {
                                                 "builder_level": "season",
                                                 "plex_search": {
-                                                    "all": { # <-- Kometa will zwingend dieses "all"
-                                                        "show.title": "<<show_title>>",
-                                                        "season.index": "<<season_number>>"
-                                                    }
+                                                    "title": "<<show_title>>" # Step 1: Holt alle Staffeln der Serie von Plex
+                                                },
+                                                "filters": {
+                                                    "title": "<<season_title>>" # Step 2: Kometa filtert lokal auf die korrekte Staffel
                                                 },
                                                 "overlay": overlay_design.copy()
                                             }
                                             
                                         show_title = getattr(plex_item, "parentTitle", "Unbekannte Serie")
                                         season_title = plex_item.title
-                                        season_num = plex_item.index 
                                         dict_key = f"{show_title} - {season_title}"
                                         
                                         kometa_exports[library_name]["overlays"][dict_key] = {
                                             "template": {
                                                 "name": "days_left_banner_season",
                                                 "show_title": show_title,
-                                                "season_number": season_num,
+                                                "season_title": season_title,
                                                 "banner_text": final_banner_text,
                                                 "color": current_color,
                                                 "font_color": current_text_color
