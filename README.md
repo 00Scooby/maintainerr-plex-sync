@@ -96,9 +96,9 @@ settings:
 
 ## 🛠️ How it works
 1. The script fetches the specified collections from your Maintainerr API.
-2. It calculates the days left before deletion for each item based on addDate and deleteAfterDays.
-3. It connects to Plex via the plexapi wrapper and updates the collection sorting.
-4. If enabled, it automatically generates library-specific YAML files (e.g., maintainerr_Filme.yml, maintainerr_Serien.yml) that Kometa can read to add visual expiration banners to your media.
+2. It calculates the days left before deletion for each item based on `addDate` and `deleteAfterDays`.
+3. It connects to Plex via the `plexapi` wrapper and updates the collection sorting.
+4. If enabled, it automatically generates library-specific YAML files (e.g., `maintainerr_Filme.yml`, `maintainerr_Serien.yml`) that Kometa can read to add visual expiration banners to your media.
 
 ## 🎨 Kometa Setup
 To utilize the generated overlay files, simply include them in your Kometa configuration under the respective libraries. Since the script splits the exports by library name, you avoid soft fails in your Kometa logs!
