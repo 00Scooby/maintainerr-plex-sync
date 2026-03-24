@@ -16,7 +16,7 @@ load_dotenv()
 PLEX_URL = os.environ.get("PLEX_URL")
 PLEX_TOKEN = os.environ.get("PLEX_TOKEN")
 MAINTAINERR_URL = os.environ.get("MAINTAINERR_URL")
-CURRENT_VERSION = "1.1.9"
+CURRENT_VERSION = "1.1.10"
 
 def load_config():
     try:
@@ -223,8 +223,8 @@ def sync_collections():
                                         # Füge das Staffel-Template nur hinzu, wenn es in dieser Mediathek gebraucht wird
                                         if "days_left_banner_season" not in kometa_exports[library_name]["templates"]:
                                             kometa_exports[library_name]["templates"]["days_left_banner_season"] = {
+                                                "builder_level": "season", # <-- DAS IST DER LEBENSRETTER!
                                                 "plex_search": {
-                                                    "type": "season",
                                                     "show.title": "<<show_title>>",
                                                     "title": "<<season_title>>"
                                                 },
