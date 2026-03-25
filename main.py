@@ -224,13 +224,10 @@ def sync_collections():
                                         if "days_left_banner_season" not in kometa_exports[library_name]["templates"]:
                                             kometa_exports[library_name]["templates"]["days_left_banner_season"] = {
                                                 "builder_level": "season",
-                                                "plex_search": {
-                                                    "all": {
-                                                        "show.title": "<<show_title>>" # MIT PUNKT! Das ist die Plex-API!
-                                                    }
-                                                },
+                                                "plex_all": True, # Wir holen alle Staffeln
                                                 "filters": {
-                                                    "title.is": "<<season_title>>" # Das ist Kometas lokaler Filter (aus deinem Wiki-Auszug)
+                                                    "show_title.is": "<<show_title>>", # Kometa-Filter für die Serie (mit Unterstrich!)
+                                                    "title.is": "<<season_title>>"     # Kometa-Filter für die Staffel
                                                 },
                                                 "overlay": overlay_design.copy()
                                             }
