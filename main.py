@@ -16,7 +16,7 @@ load_dotenv()
 PLEX_URL = os.environ.get("PLEX_URL")
 PLEX_TOKEN = os.environ.get("PLEX_TOKEN")
 MAINTAINERR_URL = os.environ.get("MAINTAINERR_URL")
-CURRENT_VERSION = "1.1.14"
+CURRENT_VERSION = "1.1.16"
 
 def load_config():
     try:
@@ -223,17 +223,16 @@ def sync_collections():
                                         # Füge das Staffel-Template nur hinzu, wenn es in dieser Mediathek gebraucht wird
                                         if "days_left_banner_season" not in kometa_exports[library_name]["templates"]:
                                             kometa_exports[library_name]["templates"]["days_left_banner_season"] = {
-                                                "builder_level": "show", # Wir suchen nach der Serie, nicht nach der Staffel!
+                                                "builder_level": "season",
                                                 "plex_search": {
                                                     "all": {
-                                                        "title": "<<show_title>>" # Hier funktioniert "title" jetzt perfekt für den Seriennamen
+                                                        "show.title": "<<show_title>>" # MIT PUNKT! Das ist die Plex-API!
                                                     }
                                                 },
                                                 "filters": {
-                                                    "season_title.is": "<<season_title>>" # Wir filtern aus der gefundenen Serie lokal die richtige Staffel heraus
+                                                    "title.is": "<<season_title>>" # Das ist Kometas lokaler Filter (aus deinem Wiki-Auszug)
                                                 },
-                                                "overlay": overlay_design.copy(),
-                                                "overlay_level": "season" # Wir sagen Kometa: "Wende das Banner auf die Staffel an, nicht auf die Serie!"
+                                                "overlay": overlay_design.copy()
                                             }
                                             
                                         show_title = getattr(plex_item, "parentTitle", "Unbekannte Serie")
