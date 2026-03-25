@@ -223,14 +223,17 @@ def sync_collections():
                                         # Füge das Staffel-Template nur hinzu, wenn es in dieser Mediathek gebraucht wird
                                         if "days_left_banner_season" not in kometa_exports[library_name]["templates"]:
                                             kometa_exports[library_name]["templates"]["days_left_banner_season"] = {
-                                                "builder_level": "season",
+                                                "builder_level": "show", # Wir suchen nach der Serie, nicht nach der Staffel!
                                                 "plex_search": {
-                                                    "show.title": "<<show_title>>" # Holt blitzschnell alle Staffeln dieser spezifischen Serie
+                                                    "all": {
+                                                        "title": "<<show_title>>" # Hier funktioniert "title" jetzt perfekt für den Seriennamen
+                                                    }
                                                 },
                                                 "filters": {
-                                                    "title.is": "<<season_title>>" # .is Modifier für exakten Match (kein Verwechseln von Staffel 2 mit 20)
+                                                    "season_title.is": "<<season_title>>" # Wir filtern aus der gefundenen Serie lokal die richtige Staffel heraus
                                                 },
-                                                "overlay": overlay_design.copy()
+                                                "overlay": overlay_design.copy(),
+                                                "overlay_level": "season" # Wir sagen Kometa: "Wende das Banner auf die Staffel an, nicht auf die Serie!"
                                             }
                                             
                                         show_title = getattr(plex_item, "parentTitle", "Unbekannte Serie")
