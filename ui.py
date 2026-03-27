@@ -44,10 +44,10 @@ def load_base_poster_optimized():
     except FileNotFoundError:
         return None
 
-# Seiten-Konfiguration (Dark Theme ist Standard in image_1.png)
+# Seiten-Konfiguration mit eigenem Logo-Favicon
 st.set_page_config(
     page_title="MaintainerrSYNC - Dashboard",
-    page_icon="🚀",
+    page_icon="img/msync_favicon.png", # <-- Pfad zu deinem Logo
     layout="wide"
 )
 
@@ -301,7 +301,7 @@ with col2:
                 # Ebenen zusammenfügen und anzeigen
                 final_img = Image.alpha_composite(base_poster, overlay_layer)
                 
-                st.image(final_img, caption="Live Preview", width="stretch", format="PNG")
+                st.image(final_img, caption="Live Preview", use_container_width=True)
 
         except Exception as e:
             st.error(f"❌ Fehler bei der Vorschau-Generierung: {e}")
