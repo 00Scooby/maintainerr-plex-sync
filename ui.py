@@ -272,7 +272,7 @@ with col2:
     
     # Manueller Sync Button
     st.markdown("Klicke hier, um den Sync-Prozess sofort im Hintergrund zu starten.")
-    if st.button("▶️ SYNC JETZT STARTEN", width=stretch):
+    if st.button("▶️ SYNC JETZT STARTEN", use_container_width=True):
         with st.spinner("Sync läuft... Bitte warten..."):
             try:
                 # Wir rufen einfach deine geniale Funktion aus der main.py auf!
