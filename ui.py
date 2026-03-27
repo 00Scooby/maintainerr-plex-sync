@@ -38,22 +38,30 @@ def get_maintainerr_collections():
         pass
     return []
 
-# --- HINTERGRUND TIMER LOGIK ---
+# --- DYNAMISCHE TIMER LOGIK ---
 
-def run_timer():
-    """Diese Funktion läuft in einem eigenen Thread und prüft den Zeitplan."""
-    # Hier definieren wir den Zeitplan (z.B. täglich um 04:30 Uhr)
-    # Später können wir das auch noch über die UI konfigurierbar machen!
-    schedule.every().day.at("04:30").do(sync_collections)
+def rebuild_schedule():
+    """Löscht alle alten Termine und baut den Zeitplan basierend auf der Config neu auf."""
+    schedule.clear()
+    sync_times = settings.get("sync_times", ["04:30"])
     
+    for t in sync_times:
+        try:
+            schedule.every().day.at(t).do(sync_collections)
+        except Exception as e:
+            st.error(f"Ungültige Zeit im Zeitplan: {t}")
+
+def run_timer_loop():
+    """Hintergrund-Thread, der stur den Schedule abarbeitet."""
     while True:
         schedule.run_pending()
-        time.sleep(60) # Alle 60 Sekunden prüfen
+        time.sleep(10) # Häufiger prüfen für bessere UI-Reaktion
 
-# Den Thread nur einmalig starten
-if 'timer_started' not in st.session_state:
-    threading.Thread(target=run_timer, daemon=True).start()
-    st.session_state['timer_started'] = True
+# Thread initial starten
+if 'timer_thread_started' not in st.session_state:
+    rebuild_schedule() # Einmalig beim Start aufbauen
+    threading.Thread(target=run_timer_loop, daemon=True).start()
+    st.session_state['timer_thread_started'] = True
 
 # NEU: Optimiertes Laden des Vorschaubildes (RGBA Konvertierung nur ein einziges Mal!)
 @st.cache_resource
@@ -188,6 +196,14 @@ with col1:
         st.warning("Maintainerr nicht erreichbar. Manuelle Eingabe nötig.")
         colls_text = st.text_area("Kollektionsnamen (einer pro Zeile)", value="\n".join(current_collections_list), height=150)
         new_collections_list = [name.strip() for name in colls_text.split("\n") if name.strip()]
+    
+    # Timer
+    st.subheader("⏰ Zeitplan (Sync-Intervalle)")
+    st.markdown("Gib die Uhrzeiten für den automatischen Sync ein (HH:MM), eine pro Zeile.")
+    
+    current_times = settings.get("sync_times", ["04:30"])
+    new_times_text = st.text_area("Sync-Uhrzeiten", value="\n".join(current_times), height=100)
+    new_sync_times = [t.strip() for t in new_times_text.split("\n") if t.strip()]
 
 with col2:
     st.subheader("🚀 Aktionen")
@@ -216,21 +232,30 @@ with col2:
         # Die neuen Listen direkt speichern
         settings["kometa_allowed_libraries"] = new_allowed_libs
         settings["collection_names"] = new_collections_list
+
+        # Neue Zeiten in die Settings übernehmen
+        settings["sync_times"] = new_sync_times
         
         config["settings"] = settings
         save_config(config)
+        
+        # WICHTIG: Den Timer-Thread sofort mit den neuen Zeiten füttern!
+        rebuild_schedule()
+        st.rerun() # UI neu laden, damit die "Nächster Run" Info oben rechts stimmt
 
     st.divider()
     st.subheader("🕒 Automatisierung")
     
-    # Wir berechnen, wann der nächste Run ist
     next_run = schedule.next_run()
     if next_run:
-        st.info(f"Nächster automatischer Sync: **{next_run.strftime('%d.%m.%Y %H:%M')}**")
+        st.success(f"Nächster Sync: **{next_run.strftime('%H:%M Uhr')}** ({next_run.strftime('%d.%m.')})")
+        
+        all_jobs = schedule.get_jobs()
+        with st.expander("Alle geplanten Syncs"):
+            for job in all_jobs:
+                st.write(f"• Täglich um {job.at_time}")
     else:
-        st.warning("Kein automatischer Zeitplan aktiv.")
-    
-    st.caption("Der Timer läuft im Hintergrund (Täglich um 04:30 Uhr).")
+        st.warning("Kein Zeitplan aktiv.")
 
     st.divider()
     
