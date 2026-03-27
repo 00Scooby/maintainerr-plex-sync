@@ -272,7 +272,7 @@ with col2:
     
     # Manueller Sync Button
     st.markdown("Klicke hier, um den Sync-Prozess sofort im Hintergrund zu starten.")
-    if st.button("▶️ SYNC JETZT STARTEN", use_container_width=True):
+    if st.button("▶️ SYNC JETZT STARTEN", width="stretch"):
         with st.spinner("Sync läuft... Bitte warten..."):
             try:
                 # Wir rufen einfach deine geniale Funktion aus der main.py auf!
@@ -380,14 +380,19 @@ st.subheader("📝 Live-Logs")
 
 def get_recent_logs(num_lines=50):
     """Liest die letzten X Zeilen aus der Log-Datei."""
-    log_path = "logs/maintainerr_sync.log"
+    # ABSOLUTER PFAD für Docker (gemappt in der Compose)
+    log_path = "/logs/maintainerr_sync.log" 
+    
     if not os.path.exists(log_path):
-        return "Keine Log-Datei gefunden. Warte auf den ersten Run..."
+        # Fallback auf relativen Pfad, falls du lokal testest
+        log_path = "logs/maintainerr_sync.log"
+        if not os.path.exists(log_path):
+            return "Keine Log-Datei unter /logs/ oder logs/ gefunden. Warte auf den ersten Run..."
     
     try:
         with open(log_path, "r", encoding="utf-8") as f:
             lines = f.readlines()
-            # Die letzten Zeilen nehmen und umdrehen, damit das Neueste oben steht
+            # Die letzten Zeilen nehmen
             recent = lines[-num_lines:]
             return "".join(recent)
     except Exception as e:
@@ -398,5 +403,5 @@ log_content = get_recent_logs(30)
 st.code(log_content, language="text")
 
 # Kleiner Button, um die Seite und damit die Logs manuell zu pushen
-if st.button("🔄 Logs aktualisieren", use_container_width=True):
+if st.button("🔄 Logs aktualisieren", width="stretch"):
     st.rerun()
