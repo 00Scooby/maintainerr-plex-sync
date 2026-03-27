@@ -43,7 +43,7 @@ services:
       - PLEX_TOKEN=your_plex_token_here
       - MAINTAINERR_URL=[http://192.168.1.100:6246](http://192.168.1.100:6246)
     volumes:
-      - ./config.yml:/app/config.yml:ro
+      - ./config.yml:/app/config.yml
       # OPTIONAL: Map this to access the exported YAML files during a 'dry_run'
       - ./:/dry_run/
       - ./logs:/logs
