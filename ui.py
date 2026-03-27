@@ -8,6 +8,9 @@ from main import sync_collections, CURRENT_VERSION
 import requests
 from dotenv import load_dotenv
 from plexapi.server import PlexServer
+import threading
+import time
+import schedule
 
 load_dotenv()
 
@@ -34,6 +37,23 @@ def get_maintainerr_collections():
     except Exception:
         pass
     return []
+
+# --- HINTERGRUND TIMER LOGIK ---
+
+def run_timer():
+    """Diese Funktion läuft in einem eigenen Thread und prüft den Zeitplan."""
+    # Hier definieren wir den Zeitplan (z.B. täglich um 04:30 Uhr)
+    # Später können wir das auch noch über die UI konfigurierbar machen!
+    schedule.every().day.at("04:30").do(sync_collections)
+    
+    while True:
+        schedule.run_pending()
+        time.sleep(60) # Alle 60 Sekunden prüfen
+
+# Den Thread nur einmalig starten
+if 'timer_started' not in st.session_state:
+    threading.Thread(target=run_timer, daemon=True).start()
+    st.session_state['timer_started'] = True
 
 # NEU: Optimiertes Laden des Vorschaubildes (RGBA Konvertierung nur ein einziges Mal!)
 @st.cache_resource
@@ -199,6 +219,18 @@ with col2:
         
         config["settings"] = settings
         save_config(config)
+
+    st.divider()
+    st.subheader("🕒 Automatisierung")
+    
+    # Wir berechnen, wann der nächste Run ist
+    next_run = schedule.next_run()
+    if next_run:
+        st.info(f"Nächster automatischer Sync: **{next_run.strftime('%d.%m.%Y %H:%M')}**")
+    else:
+        st.warning("Kein automatischer Zeitplan aktiv.")
+    
+    st.caption("Der Timer läuft im Hintergrund (Täglich um 04:30 Uhr).")
 
     st.divider()
     
