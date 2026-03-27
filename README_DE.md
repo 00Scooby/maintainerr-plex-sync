@@ -36,6 +36,8 @@ services:
     image: ghcr.io/00scooby/maintainerr-plex-sync:latest
     container_name: maintainerr_sync
     restart: unless-stopped
+    ports:
+      - "8501:8501"
     environment:
       - TZ=Europe/Zurich # Zeitzone anpassen
       - PLEX_URL=[http://192.168.1.100:32400](http://192.168.1.100:32400)
