@@ -220,7 +220,7 @@ with col2:
     st.subheader("🚀 Aktionen")
     
     # Speichern Button
-    if st.button("💾 Konfiguration speichern", use_container_width=True, type="primary"):
+    if st.button("💾 Konfiguration speichern", width="stretch", type="primary"):
         # Werte zurück in das Dictionary schreiben
         settings["run_mode"] = new_mode
         settings["log_level"] = new_log
@@ -374,13 +374,29 @@ with col2:
         except Exception as e:
             st.error(f"❌ Fehler bei der Vorschau-Generierung: {e}")
 
-    st.divider()
-    st.subheader("📝 Live-Logs")
+# === LOG-VIEWER (Ganz unten über die volle Breite) ===
+st.divider()
+st.subheader("📝 Live-Logs")
 
-    # Wir nutzen ein Text-Area oder ein Code-Block für die Log-Optik
-    log_content = get_recent_logs(30)
-    st.code(log_content, language="text")
+def get_recent_logs(num_lines=50):
+    """Liest die letzten X Zeilen aus der Log-Datei."""
+    log_path = "logs/maintainerr_sync.log"
+    if not os.path.exists(log_path):
+        return "Keine Log-Datei gefunden. Warte auf den ersten Run..."
+    
+    try:
+        with open(log_path, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+            # Die letzten Zeilen nehmen und umdrehen, damit das Neueste oben steht
+            recent = lines[-num_lines:]
+            return "".join(recent)
+    except Exception as e:
+        return f"Fehler beim Lesen der Logs: {e}"
 
-    # Ein kleiner Button zum manuellen Aktualisieren der Logs
-    if st.button("🔄 Logs aktualisieren"):
-        st.rerun()
+# Log-Inhalt abrufen und in einer schicken Code-Box anzeigen
+log_content = get_recent_logs(30)
+st.code(log_content, language="text")
+
+# Kleiner Button, um die Seite und damit die Logs manuell zu pushen
+if st.button("🔄 Logs aktualisieren", use_container_width=True):
+    st.rerun()
