@@ -5,6 +5,35 @@ import PIL.Image as Image
 import PIL.ImageDraw as ImageDraw
 import PIL.ImageFont as ImageFont
 from main import sync_collections, CURRENT_VERSION
+import requests
+from dotenv import load_dotenv
+from plexapi.server import PlexServer
+
+load_dotenv()
+
+PLEX_URL = os.environ.get("PLEX_URL")
+PLEX_TOKEN = os.environ.get("PLEX_TOKEN")
+MAINTAINERR_URL = os.environ.get("MAINTAINERR_URL")
+
+@st.cache_data(ttl=300)
+def get_plex_libraries():
+    if not PLEX_URL or not PLEX_TOKEN: return []
+    try:
+        plex = PlexServer(PLEX_URL, PLEX_TOKEN)
+        return [lib.title for lib in plex.library.sections()]
+    except Exception:
+        return []
+
+@st.cache_data(ttl=300)
+def get_maintainerr_collections():
+    if not MAINTAINERR_URL: return []
+    try:
+        res = requests.get(f"{MAINTAINERR_URL}/api/collections", timeout=5, headers={"Accept": "application/json"})
+        if res.status_code == 200:
+            return [c.get("title") for c in res.json() if c.get("title")]
+    except Exception:
+        pass
+    return []
 
 # Seiten-Konfiguration (Dark Theme ist Standard in image_1.png)
 st.set_page_config(
@@ -66,6 +95,20 @@ with col1:
 
     st.subheader("🎨 Kometa Overlay Design")
     enable_kometa = st.toggle("Kometa Overlays generieren", value=settings.get("enable_kometa_overlays", True))
+
+    # Plex Libraries live laden
+    available_libs = get_plex_libraries()
+    current_libs = settings.get("kometa_allowed_libraries", [])
+    
+    if available_libs:
+        # Nur die markieren, die auch wirklich noch existieren
+        valid_defaults = [l for l in current_libs if l in available_libs]
+        new_allowed_libs = st.multiselect("Erlaubte Plex-Mediatheken (Leer = Alle)", available_libs, default=valid_defaults)
+    else:
+        # Fallback, falls Plex offline ist
+        st.warning("Plex nicht erreichbar. Manuelle Eingabe nötig.")
+        libs_text = st.text_input("Erlaubte Plex-Mediatheken (Komma-getrennt)", value=", ".join(current_libs))
+        new_allowed_libs = [l.strip() for l in libs_text.split(",") if l.strip()]
     
     # Farben mit Color Picker
     c1, c2 = st.columns(2)
@@ -104,11 +147,18 @@ with col1:
 
     # Kollektionen
     st.subheader("📚 Kollektionen (Zu synchronisierende Listen)")
-    st.markdown("Trage hier die Namen deiner Maintainerr-Kollektionen ein, einen pro Zeile.")
+    st.markdown("Wähle hier deine Maintainerr-Kollektionen aus.")
     
+    available_collections = get_maintainerr_collections()
     current_collections_list = settings.get("collection_names", [])
-    current_collections_text = "\n".join(current_collections_list)
-    new_collections_text = st.text_area("Kollektionsnamen (einer pro Zeile)", value=current_collections_text, height=200)
+    
+    if available_collections:
+        valid_colls = [c for c in current_collections_list if c in available_collections]
+        new_collections_list = st.multiselect("Aktive Kollektionen", available_collections, default=valid_colls)
+    else:
+        st.warning("Maintainerr nicht erreichbar. Manuelle Eingabe nötig.")
+        colls_text = st.text_area("Kollektionsnamen (einer pro Zeile)", value="\n".join(current_collections_list), height=150)
+        new_collections_list = [name.strip() for name in colls_text.split("\n") if name.strip()]
 
 with col2:
     st.subheader("🚀 Aktionen")
@@ -133,9 +183,10 @@ with col2:
         settings["kometa_back_radius"] = new_radius
         settings["kometa_back_width"] = new_back_width
         settings["kometa_back_height"] = new_back_height
-        
-        # Kollektionen-Text wieder in eine Liste umwandeln
-        settings["collection_names"] = [name.strip() for name in new_collections_text.split("\n") if name.strip()]
+
+        # Die neuen Listen direkt speichern
+        settings["kometa_allowed_libraries"] = new_allowed_libs
+        settings["collection_names"] = new_collections_list
         
         config["settings"] = settings
         save_config(config)
