@@ -38,31 +38,6 @@ def get_maintainerr_collections():
         pass
     return []
 
-# --- DYNAMISCHE TIMER LOGIK ---
-
-def rebuild_schedule():
-    """Löscht alle alten Termine und baut den Zeitplan basierend auf der Config neu auf."""
-    schedule.clear()
-    sync_times = settings.get("sync_times", ["04:30"])
-    
-    for t in sync_times:
-        try:
-            schedule.every().day.at(t).do(sync_collections)
-        except Exception as e:
-            st.error(f"Ungültige Zeit im Zeitplan: {t}")
-
-def run_timer_loop():
-    """Hintergrund-Thread, der stur den Schedule abarbeitet."""
-    while True:
-        schedule.run_pending()
-        time.sleep(10) # Häufiger prüfen für bessere UI-Reaktion
-
-# Thread initial starten
-if 'timer_thread_started' not in st.session_state:
-    rebuild_schedule() # Einmalig beim Start aufbauen
-    threading.Thread(target=run_timer_loop, daemon=True).start()
-    st.session_state['timer_thread_started'] = True
-
 # NEU: Optimiertes Laden des Vorschaubildes (RGBA Konvertierung nur ein einziges Mal!)
 @st.cache_resource
 def load_base_poster_optimized():
@@ -97,6 +72,42 @@ def save_config(config_data):
 # Config in den Speicher laden
 config = load_config()
 settings = config.get("settings", {})
+
+def get_recent_logs(num_lines=50):
+    """Liest die letzten X Zeilen aus der Log-Datei."""
+    log_path = "logs/maintainerr_sync.log"
+    if not os.path.exists(log_path):
+        return "Keine Log-Datei gefunden. Warte auf den ersten Run..."
+    
+    try:
+        with open(log_path, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+            # Die letzten X Zeilen nehmen und umdrehen, damit das Neueste oben steht
+            recent = lines[-num_lines:]
+            return "".join(recent)
+    except Exception as e:
+        return f"Fehler beim Lesen der Logs: {e}"
+        
+# --- DYNAMISCHE TIMER LOGIK ---
+def rebuild_schedule():
+    schedule.clear()
+    sync_times = settings.get("sync_times", ["04:30"])
+    for t in sync_times:
+        try:
+            schedule.every().day.at(t).do(sync_collections)
+        except Exception as e:
+            st.error(f"Ungültige Zeit im Zeitplan: {t}")
+
+def run_timer_loop():
+    while True:
+        schedule.run_pending()
+        time.sleep(10) # Häufiger prüfen für bessere UI-Reaktion
+
+# Thread initial starten
+if 'timer_thread_started' not in st.session_state:
+    rebuild_schedule() # Einmalig beim Start aufbauen
+    threading.Thread(target=run_timer_loop, daemon=True).start()
+    st.session_state['timer_thread_started'] = True
 
 # === UI HEADER ===
 header_col1, header_col2 = st.columns([1, 6])
@@ -261,7 +272,7 @@ with col2:
     
     # Manueller Sync Button
     st.markdown("Klicke hier, um den Sync-Prozess sofort im Hintergrund zu starten.")
-    if st.button("▶️ SYNC JETZT STARTEN", use_container_width=True):
+    if st.button("▶️ SYNC JETZT STARTEN", width=stretch):
         with st.spinner("Sync läuft... Bitte warten..."):
             try:
                 # Wir rufen einfach deine geniale Funktion aus der main.py auf!
@@ -358,7 +369,18 @@ with col2:
                 # Ebenen zusammenfügen und anzeigen
                 final_img = Image.alpha_composite(base_poster, overlay_layer)
                 
-                st.image(final_img, caption="Live Preview", use_container_width=True)
+                st.image(final_img, caption="Live Preview", width=stretch)
 
         except Exception as e:
             st.error(f"❌ Fehler bei der Vorschau-Generierung: {e}")
+
+    st.divider()
+    st.subheader("📝 Live-Logs")
+
+    # Wir nutzen ein Text-Area oder ein Code-Block für die Log-Optik
+    log_content = get_recent_logs(30)
+    st.code(log_content, language="text")
+
+    # Ein kleiner Button zum manuellen Aktualisieren der Logs
+    if st.button("🔄 Logs aktualisieren"):
+        st.rerun()
