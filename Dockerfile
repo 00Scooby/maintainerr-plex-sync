@@ -8,8 +8,12 @@ WORKDIR /app
 ENV PYTHONIOENCODING=utf-8
 ENV LANG=C.UTF-8
 
-# Pakete installieren (Streamlit ist neu dabei!)
-RUN pip install --no-cache-dir requests python-dotenv pyyaml plexapi schedule streamlit
+# NEU: Fix für den PermissionError und Streamlit-Telemetry
+ENV HOME=/tmp
+ENV STREAMLIT_GATHER_USAGE_STATS=false
+
+# Pakete installieren (Streamlit & Pillow sind dabei)
+RUN pip install --no-cache-dir requests python-dotenv pyyaml plexapi schedule streamlit pillow
 
 # Unseren kompletten Code in den Container kopieren
 COPY . /app/
@@ -17,5 +21,5 @@ COPY . /app/
 # Port für das Streamlit Web-Dashboard freigeben
 EXPOSE 8501
 
-# Befehl, der beim Starten ausgeführt wird (Startet die UI)
+# Befehl, der beim Starten ausgeführt wird
 CMD ["streamlit", "run", "ui.py", "--server.port=8501", "--server.address=0.0.0.0"]

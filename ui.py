@@ -77,7 +77,7 @@ with col1:
         text_warning = st.color_picker("Schriftfarbe (Warnung)", value=settings.get("kometa_text_color_warning", "#141414"))
 
     # Aufbohren des Overlay-Designs (Alle Parameter!)
-    st.subheader("📏 Position & Größe (Alle Design-Parameter)")
+    st.subheader("📏 Position & Grösse (Alle Design-Parameter)")
     st.markdown("Alle Parameter des Kometa Overlay Design sind nun konfigurierbar.")
     
     # Ausrichtung (Alignment)
@@ -87,20 +87,20 @@ with col1:
     ca1, ca2 = st.columns(2)
     with ca1:
         new_align_h = st.selectbox("Horizontale Ausrichtung", align_h_options, index=align_h_options.index(settings.get("kometa_horizontal_align", "left")))
-        new_offset_h = st.number_input("Horizontaler Offset (Pixel)", value=settings.get("kometa_horizontal_offset", 20), min_value=0)
+        new_offset_h = st.slider("Horizontaler Offset (Pixel)", min_value=0, max_value=500, value=settings.get("kometa_horizontal_offset", 20))
     with ca2:
         new_align_v = st.selectbox("Vertikale Ausrichtung", align_v_options, index=align_v_options.index(settings.get("kometa_vertical_align", "top")))
-        new_offset_v = st.number_input("Vertikaler Offset (Pixel)", value=settings.get("kometa_vertical_offset", 20), min_value=0)
+        new_offset_v = st.slider("Vertikaler Offset (Pixel)", min_value=0, max_value=500, value=settings.get("kometa_vertical_offset", 20))
 
-    # Größen & Form
+    # Grössen & Form mit Sliders
     cs1, cs2, cs3 = st.columns(3)
     with cs1:
-        new_font_size = st.number_input("Schriftgröße (Pixel)", value=settings.get("kometa_font_size", 55), min_value=10)
-        new_radius = st.number_input("Ecken-Radius (Pixel)", value=settings.get("kometa_back_radius", 20), min_value=0)
+        new_font_size = st.slider("Schriftgrösse (Pixel)", min_value=10, max_value=150, value=settings.get("kometa_font_size", 55))
+        new_radius = st.slider("Ecken-Radius (Pixel)", min_value=0, max_value=100, value=settings.get("kometa_back_radius", 20))
     with cs2:
-        new_back_width = st.number_input("Banner-Breite (Pixel)", value=settings.get("kometa_back_width", 380), min_value=10)
+        new_back_width = st.slider("Banner-Breite (Pixel)", min_value=50, max_value=1000, value=settings.get("kometa_back_width", 380))
     with cs3:
-        new_back_height = st.number_input("Banner-Höhe (Pixel)", value=settings.get("kometa_back_height", 85), min_value=10)
+        new_back_height = st.slider("Banner-Höhe (Pixel)", min_value=20, max_value=300, value=settings.get("kometa_back_height", 85))
 
     # Kollektionen
     st.subheader("📚 Kollektionen (Zu synchronisierende Listen)")
@@ -223,7 +223,7 @@ with col2:
 
         # 6. Ebenen zusammenfügen und anzeigen
         final_img = Image.alpha_composite(preview_img, overlay_layer)
-        st.image(final_img, caption="Live Preview: Starbound Threshold", use_container_width=True)
+        st.image(final_img, caption="Live Preview: Starbound Threshold", width="stretch")
 
     except FileNotFoundError:
         st.warning("⚠️ Vorschaubild img/maintainerr_preview.png nicht gefunden!")
