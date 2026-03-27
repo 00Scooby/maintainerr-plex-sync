@@ -156,69 +156,64 @@ with col2:
 
     # NEU: Live WYSIWYG Vorschau (Simuliert)
     st.subheader("🔍 Live-Vorschau (WYSIWYG Simulation)")
-    st.markdown("Dieses Plakat (2000px x 3000px) dient als Benchmark für deine Design-Einstellungen. Es zeigt den 'Dringend' Threshold Status (<= 10 Tage). Nutze die Regler links, um die Position und Größe für deine Posters perfekt einzustellen.")
+    st.markdown("Dieses Plakat (2000px x 3000px) dient als Benchmark für deine Design-Einstellungen. Es zeigt den 'Dringend' Threshold Status (<= 10 Tage).")
     
-    # Wir laden dein hochauflösendes Vorschau-Poster (maintainerr_preview.png)
     try:
-        preview_img = Image.open("img/maintainerr_preview.png")
-        
-        # Live Banner Overlay Logic mit Pillow!
-        preview_img = preview_img.convert("RGBA")
+        # Bild laden und für Transparenz vorbereiten
+        preview_img = Image.open("img/maintainerr_preview.png").convert("RGBA")
         overlay_layer = Image.new("RGBA", preview_img.size, (255, 255, 255, 0))
         draw = ImageDraw.Draw(overlay_layer)
         
-        # Banner-Form (abgerundetes Rechteck)
-        # Wir simulieren den 'Dringend' Status für die Vorschau (Red box with white text)
-        banner_rect = (
-            settings.get("kometa_horizontal_offset", 20),
-            settings.get("kometa_vertical_offset", 20),
-            settings.get("kometa_horizontal_offset", 20) + settings.get("kometa_back_width", 380),
-            settings.get("kometa_vertical_offset", 20) + settings.get("kometa_back_height", 85)
-        )
-        # Pillow nutzt (Left, Top, Right, Bottom). Kometa nutzt Width/Height.
-        
-        # PIL hat keine einfache Funktion für abgerundete Rechtecke. Wir simulieren es mit Kreisen.
-        # Aber das ist für einen schnellen Live-Vorschau-Vogel zu viel Code.
-        # Wir malen ein einfaches Rechteck mit Pillow, bis wir das Pillow Modul updaten.
-        # draw.rectangle(banner_rect, fill=settings.get("kometa_color_urgent", "#E31E24"))
-
-        # Für eine saubere, moderne Vorschau nehmen wir an, Pillow hat das Modul.
-        # Wenn nicht, zeige ein Warn-Overlay oder ein statisches Mockup.
-        # Da wir ein sauberes, professionelles Mockup (image_6.png) als Canvas haben,
-        # simulieren wir das WYSIWYG-Feature mit statischem Text und einem Banner-Layer,
-        # bis du Pillow im Dockerfile aktualisierst.
-
-        # Da wir ein sauberes, professionelles Mockup (image_6.png) als Canvas haben,
-        # nutzen wir es als statischen Live-Preview, bis Pillow im Dockerfile aktualisiert ist.
-
-        # Hier simulieren wir das WYSIWYG-Feature, indem wir ein Banner-Layer hinzufügen.
-        # pillow hat keine native funktion für abgerundete rechtecke. wir müssen sie mit kreisen simulieren.
-        
+        # Variablen aus den Settings holen
         banner_color = settings.get("kometa_color_urgent", "#E31E24")
         text_color = settings.get("kometa_text_color_urgent", "#FFFFFF")
         radius = settings.get("kometa_back_radius", 20)
-        
-        # Wir laden deine geniale Font-Datei aus image_2.png (musst du maintainerr_font.ttf im /img/ ordner haben)
-        # Wir simuliere es mit einer Standard-Pillow font
-        font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", settings.get("kometa_font_size", 55))
-        
-        text = "Noch 10 Tage" # Simulation für Urgent status
-        text_w, text_h = draw.textsize(text, font)
-        
-        # Kometa Positionierungsimuliation (stark vereinfacht, left/top offset)
-        banner_w = max(settings.get("kometa_back_width", 380), text_w + 40)
-        banner_h = max(settings.get("kometa_back_height", 85), text_h + 20)
-        
-        banner_x = settings.get("kometa_horizontal_offset", 20)
-        banner_y = settings.get("kometa_vertical_offset", 20)
-        
-        # Pillow hat keine abgerundeten Rechtecke. Wir simuliere sie mit vier Kreisen und zwei Rechtecken.
-        # Pillow ist im Container veraltet. Wir simuliere die Position, aber nicht den Radius.
-        #draw.rectangle((banner_x, banner_y, banner_x + banner_w, banner_y + banner_h), fill=banner_color)
+        banner_w = settings.get("kometa_back_width", 380)
+        banner_h = settings.get("kometa_back_height", 85)
+        offset_x = settings.get("kometa_horizontal_offset", 20)
+        offset_y = settings.get("kometa_vertical_offset", 20)
+        font_size = settings.get("kometa_font_size", 55)
 
-        # Da wir ein sauberes, professionelles Mockup (image_6.png) als Canvas haben,
-        # nutzen wir es als statischen Live-Preview, bis Pillow im Dockerfile aktualisiert ist.
+        # 1. Das Banner zeichnen (echtes abgerundetes Rechteck!)
+        banner_coords = [offset_x, offset_y, offset_x + banner_w, offset_y + banner_h]
+        draw.rounded_rectangle(banner_coords, radius=radius, fill=banner_color)
 
-        st.image(preview_img, caption="Starbound - Threshold Status (Simulation)", use_container_width=True)
+        # 2. Schriftart laden (Mit kugelsicherem Fallback für Docker)
+        try:
+            # Versuch 1: System-Font
+            font = ImageFont.truetype("arial.ttf", font_size)
+        except OSError:
+            try:
+                # Versuch 2: Linux Fallback
+                font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", font_size)
+            except OSError:
+                # Versuch 3: Der absolute Notfall-Fallback (Pillow Default)
+                try:
+                    font = ImageFont.load_default(size=font_size)
+                except TypeError:
+                    font = ImageFont.load_default()
+
+        # 3. Text zentrieren und zeichnen
+        text = "Noch 10 Tage"
+        try:
+            # Moderne Methode
+            bbox = font.getbbox(text)
+            text_w = bbox[2] - bbox[0]
+            text_h = bbox[3] - bbox[1]
+        except AttributeError:
+            # Alte Methode
+            text_w, text_h = draw.textsize(text, font)
+
+        text_x = offset_x + (banner_w - text_w) / 2
+        text_y = offset_y + (banner_h - text_h) / 2 - (font_size * 0.1) # Kleine optische Zentrierung
+        
+        draw.text((text_x, text_y), text, fill=text_color, font=font)
+
+        # 4. Ebenen zusammenfügen und anzeigen
+        final_img = Image.alpha_composite(preview_img, overlay_layer)
+        st.image(final_img, caption="Live Preview: Starbound Threshold", use_container_width=True)
+
     except FileNotFoundError:
         st.warning("⚠️ Vorschaubild img/maintainerr_preview.png nicht gefunden!")
+    except Exception as e:
+        st.error(f"❌ Fehler bei der Vorschau: {e}")
