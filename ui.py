@@ -369,7 +369,7 @@ with col2:
                 # Ebenen zusammenfügen und anzeigen
                 final_img = Image.alpha_composite(base_poster, overlay_layer)
                 
-                st.image(final_img, caption="Live Preview", width=stretch)
+                st.image(final_img, caption="Live Preview", width="stretch")
 
         except Exception as e:
             st.error(f"❌ Fehler bei der Vorschau-Generierung: {e}")
