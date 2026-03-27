@@ -164,52 +164,64 @@ with col2:
         overlay_layer = Image.new("RGBA", preview_img.size, (255, 255, 255, 0))
         draw = ImageDraw.Draw(overlay_layer)
         
-        # Variablen aus den Settings holen
-        banner_color = settings.get("kometa_color_urgent", "#E31E24")
-        text_color = settings.get("kometa_text_color_urgent", "#FFFFFF")
-        radius = settings.get("kometa_back_radius", 20)
-        banner_w = settings.get("kometa_back_width", 380)
-        banner_h = settings.get("kometa_back_height", 85)
-        offset_x = settings.get("kometa_horizontal_offset", 20)
-        offset_y = settings.get("kometa_vertical_offset", 20)
-        font_size = settings.get("kometa_font_size", 55)
+        # 1. LIVE-Werte aus der UI nutzen (nicht aus der gespeicherten Config!)
+        banner_w = int(new_back_width)
+        banner_h = int(new_back_height)
+        offset_h = int(new_offset_h)
+        offset_v = int(new_offset_v)
+        font_size = int(new_font_size)
+        radius = int(new_radius)
+        
+        # 2. Ausrichtung (Alignment) berechnen (Canvas ist 2000x3000)
+        canvas_w, canvas_h = 2000, 3000
+        
+        # Horizontale Position
+        if new_align_h == "left":
+            start_x = offset_h
+        elif new_align_h == "right":
+            start_x = canvas_w - banner_w - offset_h
+        else: # center
+            start_x = (canvas_w - banner_w) // 2 + offset_h
+            
+        # Vertikale Position
+        if new_align_v == "top":
+            start_y = offset_v
+        elif new_align_v == "bottom":
+            start_y = canvas_h - banner_h - offset_v
+        else: # center
+            start_y = (canvas_h - banner_h) // 2 + offset_v
 
-        # 1. Das Banner zeichnen (echtes abgerundetes Rechteck!)
-        banner_coords = [offset_x, offset_y, offset_x + banner_w, offset_y + banner_h]
-        draw.rounded_rectangle(banner_coords, radius=radius, fill=banner_color)
+        # 3. Das Banner zeichnen
+        banner_coords = [start_x, start_y, start_x + banner_w, start_y + banner_h]
+        draw.rounded_rectangle(banner_coords, radius=radius, fill=color_urgent)
 
-        # 2. Schriftart laden (Mit kugelsicherem Fallback für Docker)
+        # 4. Schriftart laden (Mit kugelsicherem Fallback für Docker)
         try:
-            # Versuch 1: System-Font
             font = ImageFont.truetype("arial.ttf", font_size)
         except OSError:
             try:
-                # Versuch 2: Linux Fallback
                 font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", font_size)
             except OSError:
-                # Versuch 3: Der absolute Notfall-Fallback (Pillow Default)
                 try:
                     font = ImageFont.load_default(size=font_size)
                 except TypeError:
                     font = ImageFont.load_default()
 
-        # 3. Text zentrieren und zeichnen
+        # 5. Text zentrieren und zeichnen
         text = "Noch 10 Tage"
         try:
-            # Moderne Methode
             bbox = font.getbbox(text)
             text_w = bbox[2] - bbox[0]
             text_h = bbox[3] - bbox[1]
         except AttributeError:
-            # Alte Methode
             text_w, text_h = draw.textsize(text, font)
 
-        text_x = offset_x + (banner_w - text_w) / 2
-        text_y = offset_y + (banner_h - text_h) / 2 - (font_size * 0.1) # Kleine optische Zentrierung
+        text_x = start_x + (banner_w - text_w) / 2
+        text_y = start_y + (banner_h - text_h) / 2 - (font_size * 0.1)
         
-        draw.text((text_x, text_y), text, fill=text_color, font=font)
+        draw.text((text_x, text_y), text, fill=text_urgent, font=font)
 
-        # 4. Ebenen zusammenfügen und anzeigen
+        # 6. Ebenen zusammenfügen und anzeigen
         final_img = Image.alpha_composite(preview_img, overlay_layer)
         st.image(final_img, caption="Live Preview: Starbound Threshold", use_container_width=True)
 
