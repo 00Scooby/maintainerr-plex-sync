@@ -56,19 +56,22 @@ def setup_logger(level_str, rotate=False):
     root_logger.addHandler(file_handler)
     root_logger.addHandler(stream_handler)
 
-def calculate_days_left(add_date_str, delete_after_days):
-    """
-    Normalisiert das Datum (entfernt 'T' und 'Z'), um verschiedene Maintainerr-Formate
-    abzufangen, und berechnet die verbleibenden Tage.
-    """
-    clean_date_str = add_date_str.replace("T", " ").replace("Z", "")
-    
-    # Neues Standard-Format für beide Maintainerr-Varianten
-    add_date = datetime.strptime(clean_date_str, "%Y-%m-%d %H:%M:%S.%f").replace(tzinfo=timezone.utc)
-    
-    now = datetime.now(timezone.utc)
-    days_in_list = (now - add_date).days
-    return max(0, delete_after_days - days_in_list)
+def calculate_days_left(add_date_val, delete_after_days):
+    try:
+        # 1. Prüfen, ob es ein Unix-Timestamp (Zahl oder Zahlen-String) ist
+        if str(add_date_val).replace('.', '', 1).isdigit():
+            add_date = datetime.fromtimestamp(float(add_date_val), tz=timezone.utc)
+        else:
+            # 2. Es ist Text -> Normalisieren und Parsen
+            clean_date_str = str(add_date_val).replace("T", " ").replace("Z", "")
+            add_date = datetime.strptime(clean_date_str, "%Y-%m-%d %H:%M:%S.%f").replace(tzinfo=timezone.utc)
+        
+        now = datetime.now(timezone.utc)
+        days_in_list = (now - add_date).days
+        return max(0, delete_after_days - days_in_list)
+    except Exception as e:
+        logging.error(f"❌ Fehler beim Berechnen der Tage für Wert '{add_date_val}': {e}")
+        return 0
 
 def check_for_updates():
     try:
