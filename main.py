@@ -56,23 +56,36 @@ def setup_logger(level_str, rotate=False):
     root_logger.addHandler(file_handler)
     root_logger.addHandler(stream_handler)
 
-def calculate_days_left(add_date_str, delete_after_days):
+def calculate_days_left(item, delete_after_days):
+    # 1. Prio: Wenn Maintainerr den Wert 'daysLeft' direkt liefert (Zahl)
+    api_val = item.get("daysLeft")
+    if api_val is not None:
+        try:
+            return max(0, int(api_val))
+        except:
+            pass
+
+    # 2. Prio: Manuelle Berechnung (ISO-String)
+    raw_date = item.get("addDate") or item.get("addedAt")
+    if not raw_date:
+        return 0
+        
     try:
-        # ISO-String normalisieren (T und Z entfernen)
-        clean_date_str = str(add_date_str).replace("T", " ").replace("Z", "")
-        # Maintainerr liefert Millisekunden .000, falls vorhanden abschneiden oder parsen
-        # Wir parsen es robust:
-        fmt = "%Y-%m-%d %H:%M:%S.%f" if "." in clean_date_str else "%Y-%m-%d %H:%M:%S"
+        # ISO-String säubern (T/Z entfernen)
+        clean_date = str(raw_date).replace("T", " ").replace("Z", "").strip()
+        base_date = clean_date.split(".")[0]
         
-        add_date = datetime.strptime(clean_date_str.split(".")[0], "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
-        
+        # In datetime umwandeln
+        add_dt = datetime.strptime(base_date, "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
         now = datetime.now(timezone.utc)
-        delta = now - add_date
-        days_left = delete_after_days - delta.days
+        
+        # Maintainerr rechnet oft inkl. des aktuellen Tages
+        days_passed = (now - add_dt).days
+        days_left = delete_after_days - days_passed
         
         return max(0, days_left)
     except Exception as e:
-        logging.error(f"❌ Fehler beim Berechnen der Tage für '{add_date_str}': {e}")
+        logging.error(f"❌ Fehler beim Berechnen der Tage: {e}")
         return 0
 
 def check_for_updates():
@@ -191,25 +204,21 @@ def sync_collections():
                 
                 sortable_items = []
 
+                sortable_items = []
+
                 for item in media_list:
-                    # 'id' und 'addedAt' sind die Treffer laut deiner Debug-Sonde
                     plex_id = item.get("mediaServerId") or item.get("id") or item.get("ratingKey")
-                    add_date_raw = item.get("addDate") or item.get("addedAt")
                     
-                    if not plex_id or not add_date_raw:
+                    if not plex_id:
                         continue
                     
-                    # Die Funktion fängt Fehler jetzt intern ab
-                    days_left = calculate_days_left(add_date_raw, delete_days)
+                    # Hier übergeben wir das komplette Item an unsere schlaue Funktion!
+                    days_left = calculate_days_left(item, delete_days)
                     sortable_items.append({"plex_id": int(plex_id), "days_left": days_left})
-                
-                if not sortable_items:
-                    continue
 
+                # Erst sortieren, wenn wir fertig sind
                 sortable_items.sort(key=lambda x: x["days_left"])
                 
-                # ... hier geht dein Code weiter (Plex Suche, Verschieben, etc.)
-
                 try:
                     plex_colls = plex.library.search(title=coll_title, libtype="collection")
                     if not plex_colls:
