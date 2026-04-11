@@ -182,23 +182,29 @@ def sync_collections():
                 delete_days = coll.get("deleteAfterDays", 30)
                 media_list = coll.get("media", [])
                 
-                # --- NEU: Echter Maintainerr Fetch statt Plex-Workaround ---
+                # --- NEU: Der Heilige Gral (Overlay-Data Endpoint) ---
                 media_count = coll.get("mediaCount", len(media_list))
-                maintainerr_id = coll.get("id") # Die interne Maintainerr-ID
+                maintainerr_id = coll.get("id")
                 
                 if media_count > len(media_list) and maintainerr_id:
-                    logging.info(f"🔍 API-Limit erkannt ({len(media_list)}/{media_count}). Frage Maintainerr direkt nach der kompletten Kollektion...")
+                    logging.info(f"🔍 API-Limit erkannt ({len(media_list)}/{media_count}). Hole ungeschnittene Liste via 'overlay-data' Endpoint...")
                     try:
-                        # BINGO! Hier ist der korrekte Pfad aus deiner Doku:
-                        detail_api = f"{MAINTAINERR_URL}/api/collections/collection/{maintainerr_id}"
-                        d_resp = requests.get(detail_api, headers={"Accept": "application/json"})
-                        d_resp.raise_for_status()
+                        # Wir fragen den speziellen Endpoint für Overlay-Tools ab
+                        overlay_api = f"{MAINTAINERR_URL}/api/collections/overlay-data"
+                        o_resp = requests.get(overlay_api, headers={"Accept": "application/json"})
+                        o_resp.raise_for_status()
                         
-                        detail_data = d_resp.json()
-                        media_list = detail_data.get("media", media_list)
+                        overlay_data = o_resp.json()
+                        
+                        # Da die Antwort vermutlich alle Kollektionen enthält, suchen wir unsere heraus
+                        for o_coll in overlay_data:
+                            if o_coll.get("id") == maintainerr_id:
+                                media_list = o_coll.get("media", media_list)
+                                break
+                                
                         logging.info(f"✅ Erfolgreich {len(media_list)} Items inkl. Maintainerr-Daten nachgeladen.")
                     except Exception as e:
-                        logging.error(f"❌ Fehler beim Nachladen via Maintainerr-Detail Endpoint: {e}")
+                        logging.error(f"❌ Fehler beim Nachladen via overlay-data Endpoint: {e}")
                 # --------------------------------------------------
                 
                 logging.info(f"▶️ Verarbeite {len(media_list)} Items aus Kollektion '{coll_title}'...")
