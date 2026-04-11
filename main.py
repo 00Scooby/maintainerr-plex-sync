@@ -4,7 +4,7 @@ import time
 import requests
 import yaml
 import logging
-from logging.handlers import RotatingFileHandler # <-- Diese Zeile ist neu
+from logging.handlers import RotatingFileHandler
 import schedule
 from datetime import datetime, timezone
 from dotenv import load_dotenv
@@ -16,7 +16,7 @@ load_dotenv()
 PLEX_URL = os.environ.get("PLEX_URL")
 PLEX_TOKEN = os.environ.get("PLEX_TOKEN")
 MAINTAINERR_URL = os.environ.get("MAINTAINERR_URL")
-CURRENT_VERSION = "2.0.0"
+CURRENT_VERSION = "2.0.1"
 
 def load_config():
     try:
@@ -37,7 +37,6 @@ def setup_logger(level_str, rotate=False):
     
     file_handler = RotatingFileHandler(log_file, backupCount=10, encoding="utf-8")
     
-    # NEU: Wir biegen den Standardnamen (.log.1) auf deinen Wunschnamen (-1.log) um
     def custom_log_namer(default_name):
         return default_name.replace(".log.", "-") + ".log"
     
@@ -58,7 +57,15 @@ def setup_logger(level_str, rotate=False):
     root_logger.addHandler(stream_handler)
 
 def calculate_days_left(add_date_str, delete_after_days):
-    add_date = datetime.strptime(add_date_str, "%Y-%m-%dT%H:%M:%S.%fZ").replace(tzinfo=timezone.utc)
+    """
+    Normalisiert das Datum (entfernt 'T' und 'Z'), um verschiedene Maintainerr-Formate
+    abzufangen, und berechnet die verbleibenden Tage.
+    """
+    clean_date_str = add_date_str.replace("T", " ").replace("Z", "")
+    
+    # Neues Standard-Format für beide Maintainerr-Varianten
+    add_date = datetime.strptime(clean_date_str, "%Y-%m-%d %H:%M:%S.%f").replace(tzinfo=timezone.utc)
+    
     now = datetime.now(timezone.utc)
     days_in_list = (now - add_date).days
     return max(0, delete_after_days - days_in_list)
@@ -231,7 +238,7 @@ def sync_collections():
                                                 },
                                                 "overlay": overlay_design.copy()
                                             }
-                                            
+                                        
                                         show_title = getattr(plex_item, "parentTitle", "Unbekannte Serie")
                                         season_title = plex_item.title
                                         dict_key = f"{show_title} - {season_title}"
@@ -253,7 +260,7 @@ def sync_collections():
                                                 "plex_search": {"title": "<<item_title>>"},
                                                 "overlay": overlay_design.copy()
                                             }
-                                            
+                                        
                                         dict_key = plex_item.title
                                         kometa_exports[library_name]["overlays"][dict_key] = {
                                             "template": {

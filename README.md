@@ -3,7 +3,7 @@
 
 [![Docker Build](https://github.com/00Scooby/maintainerr-plex-sync/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/00Scooby/maintainerr-plex-sync/actions/workflows/docker-publish.yml)
 [![Docker Package](https://img.shields.io/badge/docker-ghcr.io-blue.svg)](https://github.com/00Scooby/maintainerr-plex-sync/pkgs/container/maintainerr-plex-sync)
-[![Version](https://img.shields.io/badge/version-2.0.0-brightgreen.svg)](https://github.com/00Scooby/maintainerr-plex-sync/releases/latest)
+[![Version](https://img.shields.io/badge/version-2.0.1-brightgreen.svg)](https://github.com/00Scooby/maintainerr-plex-sync/releases/latest)
 [![Python 3.9](https://img.shields.io/badge/python-3.9-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -52,3 +52,6 @@ services:
 
 ## 🚑 Troubleshooting
 Check the **Live Logs** section at the bottom of the Dashboard for real-time feedback on API connections and sync status.
+
+## 🤖 AI Disclaimer
+This project was developed with the active assistance of **Google Gemini**. It's a great example of how human creativity and Artificial Intelligence can team up to build cool and useful tools for the home server community.
