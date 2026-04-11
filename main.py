@@ -188,6 +188,14 @@ def sync_collections():
                 logging.info(f"▶️ Verarbeite {len(media_list)} Items aus Kollektion '{coll_title}'...")
                 
                 sortable_items = []
+                # --- DEBUG SONDE START ---
+                if media_list:
+                    test_item = media_list[0]
+                    logging.info("🔬 DEBUG-SONDE: Erster Gegenstand der Liste:")
+                    import json
+                    logging.info(json.dumps(test_item, indent=2))
+                # --- DEBUG SONDE ENDE ---
+
                 for item in media_list:
                     # Wir klappern alle möglichen Key-Namen ab, die Maintainerr nutzt
                     plex_id = item.get("mediaServerId") or item.get("ratingKey") or item.get("id")
