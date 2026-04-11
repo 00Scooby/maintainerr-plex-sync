@@ -182,22 +182,23 @@ def sync_collections():
                 delete_days = coll.get("deleteAfterDays", 30)
                 media_list = coll.get("media", [])
                 
-                # --- NEU: Paginierung / Media-Server Workaround ---
+                # --- NEU: Echter Maintainerr Fetch statt Plex-Workaround ---
                 media_count = coll.get("mediaCount", len(media_list))
-                plex_collection_id = coll.get("mediaServerId")
+                maintainerr_id = coll.get("id") # Die interne Maintainerr-ID
                 
-                if media_count > len(media_list) and plex_collection_id:
-                    logging.info(f"🔍 API-Limit erkannt ({len(media_list)}/{media_count} geliefert). Lade komplette Liste für '{coll_title}' via Media-Server Endpoint...")
+                if media_count > len(media_list) and maintainerr_id:
+                    logging.info(f"🔍 API-Limit erkannt ({len(media_list)}/{media_count}). Frage Maintainerr direkt nach der kompletten Kollektion...")
                     try:
-                        children_api = f"{MAINTAINERR_URL}/api/media-server/collection/{plex_collection_id}/children"
-                        c_resp = requests.get(children_api, headers={"Accept": "application/json"})
-                        c_resp.raise_for_status()
+                        # BINGO! Hier ist der korrekte Pfad aus deiner Doku:
+                        detail_api = f"{MAINTAINERR_URL}/api/collections/collection/{maintainerr_id}"
+                        d_resp = requests.get(detail_api, headers={"Accept": "application/json"})
+                        d_resp.raise_for_status()
                         
-                        # Die kurze Liste mit der vollständigen überschreiben
-                        media_list = c_resp.json()
-                        logging.info(f"✅ Erfolgreich {len(media_list)} Items nachgeladen.")
+                        detail_data = d_resp.json()
+                        media_list = detail_data.get("media", media_list)
+                        logging.info(f"✅ Erfolgreich {len(media_list)} Items inkl. Maintainerr-Daten nachgeladen.")
                     except Exception as e:
-                        logging.error(f"❌ Fehler beim Nachladen der Items für '{coll_title}': {e}")
+                        logging.error(f"❌ Fehler beim Nachladen via Maintainerr-Detail Endpoint: {e}")
                 # --------------------------------------------------
                 
                 logging.info(f"▶️ Verarbeite {len(media_list)} Items aus Kollektion '{coll_title}'...")
