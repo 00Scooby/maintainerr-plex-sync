@@ -16,7 +16,7 @@ load_dotenv()
 PLEX_URL = os.environ.get("PLEX_URL")
 PLEX_TOKEN = os.environ.get("PLEX_TOKEN")
 MAINTAINERR_URL = os.environ.get("MAINTAINERR_URL")
-CURRENT_VERSION = "2.0.1"
+CURRENT_VERSION = "2.0.2"
 
 def load_config():
     try:
@@ -164,15 +164,36 @@ def sync_collections():
                 delete_days = coll.get("deleteAfterDays", 30)
                 media_list = coll.get("media", [])
                 
-                logging.info(f"✅ Kollektion '{coll_title}' in Maintainerr gefunden. Verarbeite {len(media_list)} Items...")
+                # --- NEU: Paginierung / Media-Server Workaround ---
+                media_count = coll.get("mediaCount", len(media_list))
+                plex_collection_id = coll.get("mediaServerId")
+                
+                if media_count > len(media_list) and plex_collection_id:
+                    logging.info(f"🔍 API-Limit erkannt ({len(media_list)}/{media_count} geliefert). Lade komplette Liste für '{coll_title}' via Media-Server Endpoint...")
+                    try:
+                        children_api = f"{MAINTAINERR_URL}/api/media-server/collection/{plex_collection_id}/children"
+                        c_resp = requests.get(children_api, headers={"Accept": "application/json"})
+                        c_resp.raise_for_status()
+                        
+                        # Die kurze Liste mit der vollständigen überschreiben
+                        media_list = c_resp.json()
+                        logging.info(f"✅ Erfolgreich {len(media_list)} Items nachgeladen.")
+                    except Exception as e:
+                        logging.error(f"❌ Fehler beim Nachladen der Items für '{coll_title}': {e}")
+                # --------------------------------------------------
+                
+                logging.info(f"▶️ Verarbeite {len(media_list)} Items aus Kollektion '{coll_title}'...")
                 
                 sortable_items = []
                 for item in media_list:
-                    plex_id = item.get("mediaServerId")
-                    add_date = item.get("addDate")
+                    # Flexibel auf Maintainerr- und Media-Server-Datenstruktur reagieren
+                    plex_id = item.get("mediaServerId") or item.get("ratingKey")
+                    add_date = item.get("addDate") or item.get("addedAt")
+                    
                     if not plex_id or not add_date: continue
                     
-                    days_left = calculate_days_left(add_date, delete_days)
+                    # Dank unserer Normalisierung von vorhin frisst er hier jedes Format!
+                    days_left = calculate_days_left(str(add_date), delete_days)
                     sortable_items.append({"plex_id": int(plex_id), "days_left": days_left})
                 
                 sortable_items.sort(key=lambda x: x["days_left"])
