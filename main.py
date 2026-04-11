@@ -56,21 +56,23 @@ def setup_logger(level_str, rotate=False):
     root_logger.addHandler(file_handler)
     root_logger.addHandler(stream_handler)
 
-def calculate_days_left(add_date_val, delete_after_days):
+def calculate_days_left(add_date_str, delete_after_days):
     try:
-        # 1. Prüfen, ob es ein Unix-Timestamp (Zahl oder Zahlen-String) ist
-        if str(add_date_val).replace('.', '', 1).isdigit():
-            add_date = datetime.fromtimestamp(float(add_date_val), tz=timezone.utc)
-        else:
-            # 2. Es ist Text -> Normalisieren und Parsen
-            clean_date_str = str(add_date_val).replace("T", " ").replace("Z", "")
-            add_date = datetime.strptime(clean_date_str, "%Y-%m-%d %H:%M:%S.%f").replace(tzinfo=timezone.utc)
+        # ISO-String normalisieren (T und Z entfernen)
+        clean_date_str = str(add_date_str).replace("T", " ").replace("Z", "")
+        # Maintainerr liefert Millisekunden .000, falls vorhanden abschneiden oder parsen
+        # Wir parsen es robust:
+        fmt = "%Y-%m-%d %H:%M:%S.%f" if "." in clean_date_str else "%Y-%m-%d %H:%M:%S"
+        
+        add_date = datetime.strptime(clean_date_str.split(".")[0], "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
         
         now = datetime.now(timezone.utc)
-        days_in_list = (now - add_date).days
-        return max(0, delete_after_days - days_in_list)
+        delta = now - add_date
+        days_left = delete_after_days - delta.days
+        
+        return max(0, days_left)
     except Exception as e:
-        logging.error(f"❌ Fehler beim Berechnen der Tage für Wert '{add_date_val}': {e}")
+        logging.error(f"❌ Fehler beim Berechnen der Tage für '{add_date_str}': {e}")
         return 0
 
 def check_for_updates():
@@ -188,36 +190,20 @@ def sync_collections():
                 logging.info(f"▶️ Verarbeite {len(media_list)} Items aus Kollektion '{coll_title}'...")
                 
                 sortable_items = []
-                # --- DEBUG SONDE START ---
-                if media_list:
-                    test_item = media_list[0]
-                    logging.info("🔬 DEBUG-SONDE: Erster Gegenstand der Liste:")
-                    import json
-                    logging.info(json.dumps(test_item, indent=2))
-                # --- DEBUG SONDE ENDE ---
 
                 for item in media_list:
-                    # Wir klappern alle möglichen Key-Namen ab, die Maintainerr nutzt
-                    plex_id = item.get("mediaServerId") or item.get("ratingKey") or item.get("id")
-                    
-                    # Auch beim Datum prüfen wir die gängigen Varianten
+                    # 'id' und 'addedAt' sind die Treffer laut deiner Debug-Sonde
+                    plex_id = item.get("mediaServerId") or item.get("id") or item.get("ratingKey")
                     add_date_raw = item.get("addDate") or item.get("addedAt")
                     
                     if not plex_id or not add_date_raw:
-                        logging.debug(f"🔍 Item übersprungen (ID oder Datum fehlt): {item}")
                         continue
                     
-                    try:
-                        # Unser robuster Parser aus v2.0.1 (frisst ISO-T, ISO-Space, etc.)
-                        days_left = calculate_days_left(str(add_date_raw), delete_days)
-                        sortable_items.append({"plex_id": int(plex_id), "days_left": days_left})
-                    except Exception as e:
-                        logging.error(f"❌ Zeit-Parsing Fehler bei Item {plex_id}: {e}")
-                        continue
+                    # Die Funktion fängt Fehler jetzt intern ab
+                    days_left = calculate_days_left(add_date_raw, delete_days)
+                    sortable_items.append({"plex_id": int(plex_id), "days_left": days_left})
                 
-                # Erst wenn wir Items haben, wird sortiert und geloggt
                 if not sortable_items:
-                    logging.warning(f"⚠️ Keine gültigen Items in Kollektion '{coll_title}' gefunden.")
                     continue
 
                 sortable_items.sort(key=lambda x: x["days_left"])
