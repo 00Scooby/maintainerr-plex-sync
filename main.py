@@ -16,7 +16,7 @@ load_dotenv()
 PLEX_URL = os.environ.get("PLEX_URL")
 PLEX_TOKEN = os.environ.get("PLEX_TOKEN")
 MAINTAINERR_URL = os.environ.get("MAINTAINERR_URL")
-CURRENT_VERSION = "2.0.2"
+CURRENT_VERSION = "2.0.3"
 
 def load_config():
     try:
@@ -186,17 +186,32 @@ def sync_collections():
                 
                 sortable_items = []
                 for item in media_list:
-                    # Flexibel auf Maintainerr- und Media-Server-Datenstruktur reagieren
-                    plex_id = item.get("mediaServerId") or item.get("ratingKey")
-                    add_date = item.get("addDate") or item.get("addedAt")
+                    # Wir klappern alle möglichen Key-Namen ab, die Maintainerr nutzt
+                    plex_id = item.get("mediaServerId") or item.get("ratingKey") or item.get("id")
                     
-                    if not plex_id or not add_date: continue
+                    # Auch beim Datum prüfen wir die gängigen Varianten
+                    add_date_raw = item.get("addDate") or item.get("addedAt")
                     
-                    # Dank unserer Normalisierung von vorhin frisst er hier jedes Format!
-                    days_left = calculate_days_left(str(add_date), delete_days)
-                    sortable_items.append({"plex_id": int(plex_id), "days_left": days_left})
+                    if not plex_id or not add_date_raw:
+                        logging.debug(f"🔍 Item übersprungen (ID oder Datum fehlt): {item}")
+                        continue
+                    
+                    try:
+                        # Unser robuster Parser aus v2.0.1 (frisst ISO-T, ISO-Space, etc.)
+                        days_left = calculate_days_left(str(add_date_raw), delete_days)
+                        sortable_items.append({"plex_id": int(plex_id), "days_left": days_left})
+                    except Exception as e:
+                        logging.error(f"❌ Zeit-Parsing Fehler bei Item {plex_id}: {e}")
+                        continue
                 
+                # Erst wenn wir Items haben, wird sortiert und geloggt
+                if not sortable_items:
+                    logging.warning(f"⚠️ Keine gültigen Items in Kollektion '{coll_title}' gefunden.")
+                    continue
+
                 sortable_items.sort(key=lambda x: x["days_left"])
+                
+                # ... hier geht dein Code weiter (Plex Suche, Verschieben, etc.)
 
                 try:
                     plex_colls = plex.library.search(title=coll_title, libtype="collection")
