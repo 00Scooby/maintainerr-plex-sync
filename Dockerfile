@@ -22,4 +22,4 @@ COPY . /app/
 EXPOSE 8501
 
 # Befehl, der beim Starten ausgeführt wird
-CMD ["streamlit", "run", "ui.py", "--server.port=8501", "--server.address=0.0.0.0"]
+CMD ["python", "main.py"]

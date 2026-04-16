@@ -365,33 +365,56 @@ def sync_collections():
     logging.info("🏁 Sync-Durchlauf beendet.")
 
 def main():
+    import subprocess
+    
     config = load_config()
     if not config:
         sys.exit(1)
         
     settings = config.get("settings", {})
-    run_schedules = settings.get("run_schedules", ["NOW"])
     
-    if isinstance(run_schedules, str):
-        run_schedules = [run_schedules]
-        
-    # NEU: Beim Start des Skripts (ausserhalb des Syncs) noch nicht rotieren
+    # Log beim Start einmalig ohne Rotation initialisieren
     setup_logger(settings.get("log_level", "INFO"), rotate=False)
     
-    if any(s.upper() == "NOW" for s in run_schedules):
-        logging.info("⚡ Modus 'NOW' erkannt: Führe Sync sofort aus und beende danach.")
-        sync_collections()
-        logging.info("👋 Container/Skript wird beendet. Ciao!")
-        sys.exit(0)
-    else:
-        logging.info(f"🕒 Standby-Modus aktiviert. Geplante Syncs täglich um: {', '.join(run_schedules)} Uhr.")
-        
-        for time_str in run_schedules:
-            schedule.every().day.at(time_str).do(sync_collections)
+    logging.info("🌐 Starte Streamlit Dashboard im Hintergrund...")
+    # Streamlit als separaten Prozess abfeuern
+    subprocess.Popen(["streamlit", "run", "ui.py", "--server.port=8501", "--server.address=0.0.0.0"])
+
+    logging.info("🕒 Starte intelligenten Hintergrund-Scheduler...")
+    last_schedules = []
+    
+    while True:
+        current_config = load_config()
+        if current_config:
+            current_settings = current_config.get("settings", {})
+            # Wir mergen hier die Keys, um den Bug zwischen ui.py und config.yml zu fixen
+            current_schedules = current_settings.get("sync_times", current_settings.get("run_schedules", ["04:30"]))
             
-        while True:
-            schedule.run_pending()
-            time.sleep(60) 
+            if isinstance(current_schedules, str):
+                current_schedules = [current_schedules]
+
+            # Wenn NOW getriggert wird
+            if any(s.upper() == "NOW" for s in current_schedules):
+                logging.info("⚡ Modus 'NOW' erkannt: Führe Sync sofort aus.")
+                sync_collections()
+                # NOW aus der Config löschen, damit er nicht im Loop festhängt
+                current_schedules = [s for s in current_schedules if s.upper() != "NOW"]
+                current_settings["sync_times"] = current_schedules
+                current_config["settings"] = current_settings
+                with open("config.yml", "w", encoding="utf-8") as f:
+                    yaml.dump(current_config, f, default_flow_style=False, allow_unicode=True)
+
+            # Bei Änderungen am Zeitplan direkt neu aufbauen
+            if current_schedules != last_schedules:
+                schedule.clear()
+                for time_str in current_schedules:
+                    if time_str.upper() != "NOW":
+                        schedule.every().day.at(time_str).do(sync_collections)
+                logging.info(f"🔄 Zeitplan aktiv: Syncs täglich um {', '.join(current_schedules)} Uhr")
+                last_schedules = current_schedules
+                
+        schedule.run_pending()
+        time.sleep(10)
 
 if __name__ == "__main__":
     main()

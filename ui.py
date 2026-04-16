@@ -87,27 +87,6 @@ def get_recent_logs(num_lines=50):
             return "".join(recent)
     except Exception as e:
         return f"Fehler beim Lesen der Logs: {e}"
-        
-# --- DYNAMISCHE TIMER LOGIK ---
-def rebuild_schedule():
-    schedule.clear()
-    sync_times = settings.get("sync_times", ["04:30"])
-    for t in sync_times:
-        try:
-            schedule.every().day.at(t).do(sync_collections)
-        except Exception as e:
-            st.error(f"Ungültige Zeit im Zeitplan: {t}")
-
-def run_timer_loop():
-    while True:
-        schedule.run_pending()
-        time.sleep(10) # Häufiger prüfen für bessere UI-Reaktion
-
-# Thread initial starten
-if 'timer_thread_started' not in st.session_state:
-    rebuild_schedule() # Einmalig beim Start aufbauen
-    threading.Thread(target=run_timer_loop, daemon=True).start()
-    st.session_state['timer_thread_started'] = True
 
 # === UI HEADER ===
 header_col1, header_col2 = st.columns([1, 6])
@@ -251,20 +230,17 @@ with col2:
         save_config(config)
         
         # WICHTIG: Den Timer-Thread sofort mit den neuen Zeiten füttern!
-        rebuild_schedule()
         st.rerun() # UI neu laden, damit die "Nächster Run" Info oben rechts stimmt
 
     st.divider()
     st.subheader("🕒 Automatisierung")
     
-    next_run = schedule.next_run()
-    if next_run:
-        st.success(f"Nächster Sync: **{next_run.strftime('%H:%M Uhr')}** ({next_run.strftime('%d.%m.')})")
-        
-        all_jobs = schedule.get_jobs()
-        with st.expander("Alle geplanten Syncs"):
-            for job in all_jobs:
-                st.write(f"• Täglich um {job.at_time}")
+    sync_times = settings.get("sync_times", settings.get("run_schedules", []))
+    if sync_times:
+        st.success("Hintergrund-Scheduler läuft unabhängig und ist aktiv.")
+        with st.expander("Geplante Syncs (Täglich)"):
+            for t in sync_times:
+                st.write(f"• {t} Uhr")
     else:
         st.warning("Kein Zeitplan aktiv.")
 
