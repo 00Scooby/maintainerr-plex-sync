@@ -8,9 +8,6 @@ from main import sync_collections, CURRENT_VERSION
 import requests
 from dotenv import load_dotenv
 from plexapi.server import PlexServer
-import threading
-import time
-import schedule
 
 load_dotenv()
 
