@@ -8,7 +8,7 @@
 [![Python 3.9](https://img.shields.io/badge/python-3.9-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-> 🎉 **GENIALE NEWS:** Die grundlegende Plex-Kollektions-Sortierung aus diesem Projekt wurde offiziell **nativ in Maintainerr integriert**! Ab Maintainerr v2.10.0+ kannst du deine Kollektionen direkt in der Maintainerr-Weboberfläche sortieren, ohne ein externes Skript laufen zu lassen.
+> 🎉 **GENIALE NEWS:** Die grundlegende Plex-Kollektions-Sortierung aus diesem Projekt wurde offiziell **nativ in Maintainerr integriert**! Ab Maintainerr v3.11.0+ kannst du deine Kollektionen direkt in der Maintainerr-Weboberfläche sortieren, ohne ein externes Skript laufen zu lassen.
 
 **Maintainerr-to-Plex Sync** ist ein vollautomatisierter Python-Microservice, der die Lücke zwischen den Löschplänen von [Maintainerr](https://github.com/jorenn92/Maintainerr), deiner Plex-Oberfläche und deinen Kometa-Overlays schliesst.
 
